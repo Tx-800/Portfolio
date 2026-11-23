@@ -1,26 +1,285 @@
 @import "tailwindcss";
+/* Lenis base styles (tiny; global so no separate CSS chunk gets preloaded and left unused). */
+@import "lenis/dist/lenis.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * `stage:` = the mobile "pinned stage" journey: phones and small tablets (below 1024px or a
+ * touch device), motion allowed, WebGL available. Keep in sync with STAGE_QUERY in
+ * src/lib/stageMode.ts. Unprefixed styles are the desktop / reduced-motion / no-WebGL layout.
+ */
+@custom-variant stage {
+  @media (max-width: 1023.98px) and (prefers-reduced-motion: no-preference), (pointer: coarse) and (prefers-reduced-motion: no-preference) {
+    :root:not([data-webgl="off"]) & {
+      @slot;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* "Solar Plasma" design tokens: see UIUX.md. One source of truth; never hard-code colours in components.
+   Text contrast (verified): heading ≥17:1, body ≥9.7:1, muted ≥6.3:1, orange ≥6.5:1, pink ≥5.2:1,
+   gold ≥11.6:1, stale ≥6.1:1 on bg / surface / raised. Dark text on the button gradient ≥5.7:1. */
+@theme static {
+  --color-bg: #0b0612; /* dark plum; also the dark text on gradient buttons */
+  --color-surface: #140a1c; /* cards */
+  --color-surface-2: #1a0f24; /* raised */
+  --color-border: #2a1c33;
+  --color-border-strong: #3a2840;
+  --color-heading: #fff4ec;
+  --color-body: #c9b8c4;
+  --color-muted: #a3929e;
+  --color-accent: #ff6b2c; /* solar orange: primary accent */
+  --color-accent-2: #ff2e88; /* plasma pink: secondary accent */
+  --color-gold: #ffc44d; /* labels, key metrics, badges, focus */
+  --color-stale: #7b8cff; /* cold blue: stale data only */
+
+  --radius-card: 28px;
+
+  --shadow-card: 0 30px 80px -30px color-mix(in oklab, var(--color-accent-2) 45%, transparent);
+  --shadow-glow: 0 10px 36px -8px color-mix(in oklab, var(--color-accent) 60%, transparent);
+  --shadow-glow-strong: 0 14px 48px -6px color-mix(in oklab, var(--color-accent) 85%, transparent);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* 404: the lost packet wanders, pings, and the floor grid drifts towards the viewer. */
+  --animate-wander: wander 14s ease-in-out infinite;
+  --animate-ping-out: ping-out 2.8s ease-out infinite;
+  --animate-grid-flow: grid-flow 3.5s linear infinite;
+  @keyframes wander {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    20% {
+      transform: translate(-26vw, 4vh);
+    }
+    45% {
+      transform: translate(-8vw, -6vh);
+    }
+    70% {
+      transform: translate(22vw, 3vh);
+    }
+    85% {
+      transform: translate(10vw, -5vh);
+    }
+  }
+  @keyframes ping-out {
+    0% {
+      transform: scale(0.6);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(3.2);
+      opacity: 0;
+    }
+  }
+  @keyframes grid-flow {
+    to {
+      background-position: 0 64px;
+    }
+  }
+
+  /* Terminal caret: hard on/off blink. */
+  --animate-caret: caret 1.05s steps(1, end) infinite;
+  @keyframes caret {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* Hero headline: 36px at 360px wide (3 lines) → 96px desktop. Tuned for Sora. */
+  --text-display: clamp(2.25rem, 1.2rem + 4.6vw, 6rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.035em;
+  --text-title: clamp(1.875rem, 1rem + 3.6vw, 3.75rem);
+  --text-title--line-height: 1.04;
+  --text-title--letter-spacing: -0.03em;
+  --text-subtitle: clamp(1.25rem, 2.2vw, 1.625rem);
+  --text-subtitle--line-height: 1.15;
+  --text-subtitle--letter-spacing: -0.015em;
+  --text-metric: clamp(2.25rem, 5vw, 3.5rem);
+  --text-metric--line-height: 1;
+  --text-metric--letter-spacing: -0.02em;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.65;
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.16em;
+}
+
+/* next/font exposes these variables on <html>; `inline` lets Tailwind resolve them there. */
+@theme inline {
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-bg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* No body background: <html> paints the page colour, so the fixed 3D canvas (z-index −10)
+     can show through. A body background would be painted on top of it. */
+  body {
+    min-height: 100svh;
+    color: var(--color-body);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-heading);
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-accent) 35%, transparent);
+    color: var(--color-heading);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  /* Programmatic focus targets (sections after a jump) shouldn't draw a giant outline. */
+  [tabindex="-1"]:focus {
+    outline: none;
+  }
+
+  /* Custom cursor active (fine pointer, no reduced motion): hide the system cursor, except
+     the text cursor in form fields. */
+  html.has-custom-cursor,
+  html.has-custom-cursor * {
+    cursor: none !important;
+  }
+  html.has-custom-cursor :is(input, textarea, [contenteditable="true"]) {
+    cursor: text !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-caret {
+      animation: none;
+    }
+  }
+
+  /* No WebGL (set by JourneyCanvas): drop the empty travel gaps, like reduced motion does. */
+  :root[data-webgl="off"] [data-transit] {
+    display: none;
+  }
+
+  /* Keep the footer clear of the journey's fixed bottom bar (shown below xl). */
+  @media (width < 80rem) {
+    body:has([data-bottom-bar]) > footer {
+      padding-bottom: 6.5rem;
+    }
+  }
+}
+
+/* Signature gradient (gold → orange → pink): headline accent words, packet, hero glows. */
+@utility bg-signature {
+  background-image: linear-gradient(100deg, var(--color-gold), var(--color-accent) 50%, var(--color-accent-2));
+}
+
+@utility text-signature {
+  background-image: linear-gradient(100deg, var(--color-gold), var(--color-accent) 50%, var(--color-accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Keeps the gradient continuous when the accent words wrap across lines. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Primary button fill (orange → pink). */
+@utility bg-plasma {
+  background-image: linear-gradient(100deg, var(--color-accent), var(--color-accent-2));
+}
+
+/* Large, soft orange/pink radial glows for hero areas. Decorative; never a flat page background. */
+@utility ambient-glow {
+  background:
+    radial-gradient(45% 55% at 25% 35%, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 70%),
+    radial-gradient(40% 50% at 78% 45%, color-mix(in oklab, var(--color-accent-2) 18%, transparent), transparent 70%);
+}
+
+/* Frosted dark panel used over the 3D scene. */
+@utility panel {
+  background-color: color-mix(in oklab, var(--color-surface) 74%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/*
+ * Chapter frame: the frosted panel on desktop; dissolves in stage mode, where the chapter
+ * becomes a pinned scene (card under the 3D stage) followed by normally scrolling content.
+ */
+@utility chapter-frame {
+  background-color: color-mix(in oklab, var(--color-surface) 74%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+
+  @variant stage {
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Solid card surface. */
+@utility card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* Animated underline: grows from the left on hover/focus. */
+@utility link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 300ms var(--ease-out);
+
+  &:hover,
+  &:focus-visible {
+    background-size: 100% 1px;
+  }
+}
+
+/* Mono uppercase label, e.g. "01 — THE SPARK". */
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  font-weight: 500;
+  line-height: var(--text-label--line-height);
+  letter-spacing: var(--text-label--letter-spacing);
+  text-transform: uppercase;
 }
