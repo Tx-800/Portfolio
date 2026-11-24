@@ -5,12 +5,14 @@
  *   npm run build && npm run shots
  *   npm run shots -- --only=watchtower,agents      only some chapters (plus "overlay", "pages")
  *   npm run shots -- --url=http://localhost:3000  use an already running server
+ *   npm run shots -- --flow                       only the mobile Data Core prototype (/flow)
  *
  * Captures:
  *   desktop-<chapter>.png              1440×900, each chapter + two travel moments
  *   m390-<chapter>-{start,mid,end}.png  mobile "pinned stage" at 390×844 and 360×800 (m360-…):
  *                                      each chapter at the start, middle and end of its pinned
  *                                      scene, with an automatic overlap check (stage vs. card)
+ *   core-m390-<nn-moment>.png          /flow prototype: every hold, gate approach/pass, a site switch (--flow)
  *   *-boot / *-overlay / *-page-* / reduced-*   boot terminal, case-study overlay, other pages,
  *                                      reduced motion
  *
@@ -246,96 +248,87 @@ async function overlayCheck(page, vp, problems) {
 }
 
 /** Flow prototype anchors (page order) and where the packet should rest in each. */
-const FLOW_HOMES = [
-  ["spark", 0.5, 0.5],
-  ["websites", 0.5, 0.1],
-  ["pipeline", 0.5, 0.5],
-];
-
 /**
- * Mobile "flow" prototype (/flow): capture each 3D anchor centred on screen and the halfway
- * point of every flight between them, and verify the scroll sync:
- *   - the canvas covers the whole viewport (no clipped edge),
- *   - every visible station is drawn exactly over its DOM slot (≤ 2px drift),
- *   - at rest the packet sits on its home point in that station,
- *   - captions / buttons are never under a 3D slot or the packet.
+ * Mobile "Data Core" prototype (/flow). Captures every hold (mid-hold), the approach to each
+ * gate, the moment of passing through it (mid-morph) and one travel between two sites.
+ * Stop times come from the page itself (window.__core). Checks at every hold:
+ *   - the Core is centred (≤ 3px off the visible screen's centre),
+ *   - no visible text crosses the Core's circle (satellites may graze its edge),
+ *   - visible text stays clear of the fixed UI (top 56px / bottom 48px) and the screen edges,
+ *   - visible text blocks don't overlap each other.
  */
-async function flowPass(browser, base, vp, problems) {
+async function corePass(browser, base, vp, problems) {
   const page = await browser.newPage();
   await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: 1, isMobile: vp.mobile, hasTouch: vp.mobile });
-  page.on("console", (m) => ["error", "warn"].includes(m.type()) && problems.push(`[flow ${vp.name}] ${m.type()}: ${m.text()}`));
-  page.on("pageerror", (e) => problems.push(`[flow ${vp.name}] pageerror: ${e.message}`));
-  page.on("response", (r) => r.status() >= 400 && problems.push(`[flow ${vp.name}] HTTP ${r.status()}: ${r.url()}`));
+  page.on("console", (m) => ["error", "warn"].includes(m.type()) && problems.push(`[core ${vp.name}] ${m.type()}: ${m.text()}`));
+  page.on("pageerror", (e) => problems.push(`[core ${vp.name}] pageerror: ${e.message}`));
+  page.on("response", (r) => r.status() >= 400 && problems.push(`[core ${vp.name}] HTTP ${r.status()}: ${r.url()}`));
   await page.goto(`${base}/flow`, { waitUntil: "load" });
-  await wait(5000);
+  await wait(6000);
+  const plan = await page.evaluate(() => window.__core && { holds: window.__core.holds, gates: window.__core.gates, half: window.__core.morphHalf });
+  if (!plan || !(await page.evaluate(() => Boolean(document.querySelector("canvas"))))) {
+    problems.push(`[core ${vp.name}] engine or canvas not running`);
+    await page.close();
+    return;
+  }
 
-  // Scroll positions: anchor centred, then halfway to the next anchor.
-  const stops = await page.evaluate((homes) => {
-    const centre = (id) => {
-      const r = document.querySelector(`[data-anchor="${id}"]`).getBoundingClientRect();
-      return r.top + window.scrollY + r.height / 2 - window.innerHeight / 2;
-    };
-    const list = [];
-    homes.forEach(([id], i) => {
-      list.push({ name: id, y: centre(id), rest: id });
-      if (i < homes.length - 1) list.push({ name: `${id}-to-${homes[i + 1][0]}`, y: (centre(id) + centre(homes[i + 1][0])) / 2, rest: null });
-    });
-    return list;
-  }, FLOW_HOMES);
+  const stops = [];
+  plan.holds.forEach((h, i) => {
+    stops.push({ name: `${String(stops.length + 1).padStart(2, "0")}-hold-${h.id}`, t: h.t, hold: true });
+    const gate = plan.gates.find((g) => g > h.t && (i === plan.holds.length - 1 || g < plan.holds[i + 1].t));
+    if (gate !== undefined) {
+      stops.push({ name: `${String(stops.length + 1).padStart(2, "0")}-gate-approach`, t: gate - plan.half - 0.12 });
+      stops.push({ name: `${String(stops.length + 1).padStart(2, "0")}-gate-pass-mid-morph`, t: gate });
+      // The new shape just after its morph, before the chapter's effects run (e.g. Impact's "many people").
+      stops.push({ name: `${String(stops.length + 1).padStart(2, "0")}-gate-arrived`, t: gate + plan.half + 0.02 });
+    } else if (h.id === "websites.0") {
+      stops.push({ name: `${String(stops.length + 1).padStart(2, "0")}-travel-site-switch`, t: (h.t + plan.holds[i + 1].t) / 2 });
+    }
+  });
 
-  for (const [i, stop] of stops.entries()) {
-    await page.evaluate((y) => window.scrollTo(0, Math.max(0, y)), stop.y);
-    await wait(i === 0 ? FIRST_SETTLE_MS : SETTLE_MS);
-    const report = await page.evaluate((homes) => {
-      const out = { coverage: null, drift: [], packet: null, covered: [] };
-      const wrapper = document.querySelector("canvas")?.closest("[aria-hidden='true']");
-      if (wrapper) {
-        const r = wrapper.getBoundingClientRect();
-        out.coverage = { top: r.top, bottom: r.bottom, vh: window.innerHeight };
-      }
-      const debug = window.__flowDebug ?? { stations: {} };
-      const slotRects = {};
-      document.querySelectorAll("[data-anchor]").forEach((el) => {
-        const r = el.getBoundingClientRect();
-        slotRects[el.dataset.anchor] = r;
-        const s = debug.stations[el.dataset.anchor];
-        // Only stations whose slot is on screen are checked (others are culled).
-        if (s && r.bottom > 0 && r.top < window.innerHeight) {
-          out.drift.push({ id: el.dataset.anchor, dx: s.x - (r.left + r.width / 2), dy: s.y - (r.top + r.height / 2) });
-        }
+  for (const stop of stops) {
+    await page.evaluate((t) => window.scrollTo(0, window.__core.scrollFor(t)), stop.t);
+    await wait(2600);
+    const report = await page.evaluate(() => {
+      const vh = window.innerHeight;
+      const vw = window.innerWidth;
+      const c = window.__core.circle();
+      const out = { t: window.__core.t(), centre: { dx: c.x - vw / 2, dy: c.y - vh / 2 }, issues: [] };
+      const opacityOf = (el) => {
+        let o = 1;
+        for (let n = el; n && n !== document.body; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
+        return o;
+      };
+      // Text pieces: headings, paragraphs, list items, links and satellites inside visible beats.
+      const pieces = [...document.querySelectorAll("[data-beat] :is(h1, h2, h3, p, li, a)")]
+        .filter((el) => !el.closest(".sr-only") && !el.matches(".sr-only") && el.getClientRects().length && opacityOf(el) > 0.5)
+        .filter((el) => !el.querySelector("p, li, a") || el.matches("[data-sat]"))
+        .filter((el) => !el.closest("[data-sat]") || el.matches("[data-sat]"))
+        .map((el) => ({ el, sat: el.matches("[data-sat]"), name: (el.textContent || "").trim().slice(0, 24), r: el.getBoundingClientRect() }))
+        // Visually hidden copies for screen readers (1px boxes) aren't on screen.
+        .filter(({ r }) => r.width > 2 && r.height > 2);
+      const hitsCircle = (r, radius) => {
+        const nx = Math.max(r.left, Math.min(c.x, r.right));
+        const ny = Math.max(r.top, Math.min(c.y, r.bottom));
+        return Math.hypot(nx - c.x, ny - c.y) < radius;
+      };
+      pieces.forEach(({ sat, name, r }) => {
+        if (hitsCircle(r, c.r * (sat ? 0.82 : 1))) out.issues.push(`"${name}" covers the Core`);
+        if (r.top < 56 || r.bottom > vh - 48 || r.left < 0 || r.right > vw) out.issues.push(`"${name}" outside the safe area (${r.top.toFixed(0)}–${r.bottom.toFixed(0)}, ${r.left.toFixed(0)}–${r.right.toFixed(0)})`);
       });
-      if (debug.packet) {
-        const p = debug.packet;
-        out.packet = { ...p, homes: homes.map(([id, fx, fy]) => ({ id, x: slotRects[id].left + slotRects[id].width * fx, y: slotRects[id].top + slotRects[id].height * fy })) };
-      }
-      const blockers = Object.values(slotRects);
-      document.querySelectorAll("[data-flow-caption], section button").forEach((el) => {
-        const r = el.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > window.innerHeight) return;
-        const underSlot = blockers.some((b) => r.top < b.bottom - 1 && r.bottom > b.top + 1);
-        const p = debug.packet;
-        const underPacket = p && r.left < p.x + p.r && r.right > p.x - p.r && r.top < p.y + p.r && r.bottom > p.y - p.r;
-        if (underSlot || underPacket) out.covered.push(`${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 30)}"${underSlot ? " under a 3D slot" : " under the packet"}`);
-      });
+      pieces.forEach((a, i) =>
+        pieces.slice(i + 1).forEach((b) => {
+          if (a.el.contains(b.el) || b.el.contains(a.el)) return;
+          if (a.r.top < b.r.bottom - 1 && a.r.bottom > b.r.top + 1 && a.r.left < b.r.right - 1 && a.r.right > b.r.left + 1) out.issues.push(`"${a.name}" overlaps "${b.name}"`);
+        }),
+      );
       return out;
-    }, FLOW_HOMES);
-
-    const tag = `[flow ${vp.name}] ${stop.name}`;
-    if (!report.coverage) problems.push(`${tag}: no canvas`);
-    else if (report.coverage.top > 0.5 || report.coverage.bottom < report.coverage.vh - 0.5) {
-      problems.push(`${tag}: canvas doesn't cover the viewport (top ${report.coverage.top.toFixed(1)}, bottom ${report.coverage.bottom.toFixed(1)})`);
-    }
-    report.drift.forEach((d) => {
-      if (Math.abs(d.dx) > 2 || Math.abs(d.dy) > 2) problems.push(`${tag}: ${d.id} drifts ${d.dx.toFixed(1)}, ${d.dy.toFixed(1)} px from its slot`);
     });
-    if (stop.rest && report.packet) {
-      const home = report.packet.homes.find((h) => h.id === stop.rest);
-      const off = Math.hypot(report.packet.x - home.x, report.packet.y - home.y);
-      // Allow for the idle bob (8% of the radius).
-      if (off > Math.max(4, report.packet.r * 0.1)) problems.push(`${tag}: packet rests ${off.toFixed(1)} px from its home point`);
-    }
-    report.covered.forEach((c) => problems.push(`${tag}: ${c}`));
-    await save(page, `flow-${vp.name}-${stop.name}`);
+    const tag = `[core ${vp.name}] ${stop.name}`;
+    if (Math.abs(report.t - stop.t) > 0.05) problems.push(`${tag}: timeline at t=${report.t.toFixed(2)}, expected ${stop.t.toFixed(2)}`);
+    if (Math.abs(report.centre.dx) > 3 || Math.abs(report.centre.dy) > 3) problems.push(`${tag}: Core off centre by ${report.centre.dx.toFixed(1)}, ${report.centre.dy.toFixed(1)} px`);
+    if (stop.hold) report.issues.forEach((issue) => problems.push(`${tag}: ${issue}`));
+    await save(page, `core-${vp.name}-${stop.name}`);
   }
   await page.close();
 }
@@ -424,8 +417,8 @@ async function main() {
 
   try {
     if (args.flow) {
-      // `npm run shots -- --flow`: only the mobile flow prototype.
-      for (const vp of PHONES) await flowPass(browser, base, vp, problems);
+      // `npm run shots -- --flow`: only the mobile Data Core prototype.
+      for (const vp of PHONES) await corePass(browser, base, vp, problems);
     } else {
       if (args.phones !== "only") await desktopPass(browser, base, problems);
       for (const vp of PHONES) await phonePass(browser, base, vp, problems);

@@ -25,7 +25,7 @@ Recruiters and hiring managers (fast facts, often on a phone), engineers (depth,
 ## 4. Content rules
 - Use only facts the owner has given. Mark gaps as `[placeholder: …]` and items to check as `[confirm: …]`.
 - Employer = "a large real estate firm". No internal DB, schema or table names.
-- Dates only where given: Elitenex Jan 2026, Masstech Apr 2026, OVI Oct 2026, plus the role ranges. No education section.
+- Dates only where given: Elitenex Jan 2026, Masstech Apr 2026, OVI Oct 2026 (projects only). Experience has no dates or timeline. No education section. No résumé on the site.
 - Job title at the firm is a placeholder until confirmed (don't use "AI/ML").
 - Visual system: **Solar Plasma** (see `UIUX.md`).
 - Masstech's company stats are never presented as the owner's achievements.
@@ -37,11 +37,11 @@ Recruiters and hiring managers (fast facts, often on a phone), engineers (depth,
 |---|---|---|---|
 | `ovi-iot-solutions` | OVI IoT Solutions | Websites · Ch 2 | Freelance · Live |
 | `masstech-business-solutions` | Masstech Business Solutions | Websites · Ch 2 | Freelance · Live |
-| `elitenex` | Elitenex | Websites · Ch 2 | Practice project (link: "Coming soon") |
-| `localpilot` | LocalPilot | Product · Ch 3 | In development |
+| `elitenex` | Elitenex | Websites · Ch 2 | Portfolio project (link: "Coming soon") |
+| `localpilot` | LocalPilot | Product · Ch 3 | In development (context: Portfolio project) |
 | `snowflake-data-platform` | Snowflake Data Platform | Data · Ch 4 | In production |
 | `staleness-agent` | Staleness Agent | Data · Ch 5 | In production |
-| `onboarding-agent` | Onboarding Agent | Agents · Ch 6 | In production |
+| `qagent` | QAgent | Agents · Ch 6 | In production |
 | `compliance-agent` | Compliance Agent | Agents · Ch 6 | In production |
 
 Case study structure: Overview · The problem · What I built · Key features · How it works (flow) · My role · Tech stack · Results / impact · Status · Links · Screenshots (internal firm projects use a **flow diagram** instead of screenshots).
@@ -55,10 +55,10 @@ Case study structure: Overview · The problem · What I built · Key features ·
 | 3 | The Cockpit | Control panel, screens light up | LocalPilot |
 | 4 | The Pipeline & Warehouse | Tubes → crystalline cube, tables refresh | Snowflake data platform |
 | 5 | The Watchtower | Scanner ring, amber stale table, envelope, diagnostic label | Staleness Agent |
-| 6 | The Agents | Node network, 2 agent clusters, pings | Onboarding, Compliance |
+| 6 | The Agents | Node network, 2 agent clusters, report check + reply | QAgent, Compliance |
 | 7 | The Impact | Dashboard screen | Before → after metrics |
-| 8 | The Builder | Draggable skill-label cluster | Skills + experience timeline |
-| 9 | Your Turn | Packet flies into an inbox | Email, GitHub, LinkedIn, résumé |
+| 8 | The Builder | Draggable skill-label cluster | Skills + experience (no dates) |
+| 9 | Your Turn | Packet flies into an inbox | Email, GitHub, LinkedIn |
 
 ## 7. Functional requirements
 - **Journey (`/`)**: tall scroll page, one HTML section per chapter. Fixed canvas behind it. Hold zones keep the camera still while a panel is readable. Progress rail (desktop, chapters 1–9, click to jump). Bottom bar on mobile (current chapter + menu).
@@ -82,7 +82,7 @@ Case study structure: Overview · The problem · What I built · Key features ·
 Next.js 16 · React 19.3 · TypeScript 6 · Tailwind 4 · three / R3F 9 / drei 10 / postprocessing (bloom) · gsap + ScrollTrigger · lenis · motion · zustand · lucide-react · Vercel. Versions are in `CLAUDE.md`.
 
 ## 10. Open items (owner to fill)
-- GitHub URL, LinkedIn URL, `public/resume.pdf`, production domain.
+- GitHub URL, LinkedIn URL, production domain.
 - LocalPilot: is approval-before-publishing built or in progress?
 - Snowflake platform: the "before" problem.
 - Firm projects are under NDA: keep details to what the owner has provided. Never mention solo/team.

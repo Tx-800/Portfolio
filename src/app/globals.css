@@ -185,6 +185,13 @@
     display: none;
   }
 
+  /* Data Core layout: its own fixed UI (wordmark + menu) replaces the site header. */
+  body:has([data-core]) > header {
+    @variant stage {
+      display: none;
+    }
+  }
+
   /* Keep the footer clear of the journey's fixed bottom bar (shown below xl). */
   @media (width < 80rem) {
     body:has([data-bottom-bar]) > footer {

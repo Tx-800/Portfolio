@@ -15,7 +15,7 @@ export function StatusBadge({ status, className }: { status: ProjectStatus; clas
         className={cn(
           "size-1.5 rounded-full bg-gold",
           status === "in-development" && "animate-pulse motion-reduce:animate-none",
-          status === "practice" && "bg-transparent ring-1 ring-gold",
+          status === "portfolio" && "bg-transparent ring-1 ring-gold",
         )}
       />
       {statusLabels[status]}

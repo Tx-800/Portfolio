@@ -46,8 +46,8 @@ const fragmentShader = /* glsl */ `
 `;
 
 /**
- * The packet's look, shared by the desktop journey (Packet) and the mobile flow page
- * (FlowPacket): the gradient core with its heartbeat pulse and two halos, radius 0.32.
+ * The packet's look (used by the desktop journey's Packet): the gradient core with its
+ * heartbeat pulse and two halos, radius 0.32.
  * Pass `calm` to stop the idle spin/pulse (reduced motion).
  */
 export function PacketBody({ calm = false }: { calm?: boolean }) {

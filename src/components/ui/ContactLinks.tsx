@@ -1,4 +1,4 @@
-import { FileTextIcon, MailIcon } from "lucide-react";
+import { MailIcon } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/ui/BrandIcons";
 import { ButtonLink } from "@/components/ui/Button";
 import { CopyEmailButton } from "@/components/ui/CopyEmailButton";
@@ -6,7 +6,7 @@ import { Txt } from "@/components/ui/Txt";
 import { contact } from "@/data/content";
 import { cn } from "@/lib/utils";
 
-/** Email (primary + copy), GitHub, LinkedIn, résumé. Missing URLs render as placeholders. */
+/** Email (primary + copy), GitHub, LinkedIn. Missing URLs render as placeholders. */
 export function ContactLinks({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-wrap items-center gap-3", className)}>
@@ -30,10 +30,6 @@ export function ContactLinks({ className }: { className?: string }) {
       ) : (
         <Placeholder label="LinkedIn URL" />
       )}
-
-      <ButtonLink href={contact.resume} variant="secondary" icon={<FileTextIcon />} newTab>
-        Résumé
-      </ButtonLink>
     </div>
   );
 }

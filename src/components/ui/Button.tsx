@@ -38,7 +38,7 @@ export function ButtonLink({ href, children, variant = "primary", icon, classNam
     </>
   );
 
-  // Files (e.g. /resume.pdf) are plain links: next/link would try to prefetch them as routes.
+  // Files (e.g. a PDF) are plain links: next/link would try to prefetch them as routes.
   const isFile = /\.[a-z0-9]+$/i.test(href);
   let element: React.ReactNode;
   if (isExternal(href) || download || isFile) {

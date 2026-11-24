@@ -27,7 +27,7 @@ After adding files, restart `npm run dev`, or rebuild for production (Vercel reb
 | `localpilot/` | `hero.png` (dashboard) · `approval.png` (post approval) |
 | `snowflake-data-platform/` | optional `hero.png`: NDA-safe cover only. The flow diagram is generated automatically |
 | `staleness-agent/` | optional `hero.png`: NDA-safe cover only |
-| `onboarding-agent/` | optional `hero.png`: NDA-safe cover only |
+| `qagent/` | optional `hero.png`: NDA-safe cover only |
 | `compliance-agent/` | optional `hero.png`: NDA-safe cover only |
 
 Optional covers show nothing while missing (no placeholder), because these are internal tools under NDA.

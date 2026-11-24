@@ -33,8 +33,11 @@ export function SparkSection() {
             <h1 id="spark-heading" className="mt-6 font-display text-subtitle font-bold text-heading stage:mt-2 stage:text-[1.125rem]">
               {profile.name}
             </h1>
-            {/* Balanced wrapping; "AI agents." never splits. 3 lines at 360px wide. */}
-            <p data-reveal="lines" className="mt-4 font-display text-display font-bold text-balance text-heading stage:mt-1.5 lg:max-w-[10ch]">
+            {/* Balanced wrapping; "AI agents." never splits. A little smaller on desktop: the headline is long. */}
+            <p
+              data-reveal="lines"
+              className="mt-4 font-display text-display font-bold text-balance text-heading stage:mt-1.5 stage:text-[clamp(1.75rem,8.4vw,2.5rem)] lg:max-w-[15ch] lg:text-[clamp(3rem,4.4vw,4.75rem)]"
+            >
               <Accented text={profile.headline} accent={profile.headlineAccent} accentClassName="whitespace-nowrap" />
             </p>
             {chapter.beats && <SceneBeats index={index} beats={chapter.beats} className="stage:mt-3" />}

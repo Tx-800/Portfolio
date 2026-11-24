@@ -1,6 +1,6 @@
 import { createRandom } from "@/lib/random";
 
-export type ClusterId = "onboarding" | "compliance";
+export type ClusterId = "qagent" | "compliance";
 
 export interface AgentGraph {
   /** Node positions (local space), flattened xyz. */
@@ -16,7 +16,7 @@ export interface AgentGraph {
 }
 
 export const CLUSTER_CENTERS: Record<ClusterId, [number, number, number]> = {
-  onboarding: [-2.3, 0.25, 0],
+  qagent: [-2.3, 0.25, 0],
   compliance: [2.3, -0.15, 0],
 };
 
@@ -55,7 +55,7 @@ export function buildAgentGraph(): AgentGraph {
   const nearest = (i: number, candidates: number[], n: number) =>
     candidates.filter((j) => j !== i).sort((a, b) => dist(i, a) - dist(i, b)).slice(0, n);
 
-  const pairs: Record<ClusterId | "bridge", [number, number][]> = { onboarding: [], compliance: [], bridge: [] };
+  const pairs: Record<ClusterId | "bridge", [number, number][]> = { qagent: [], compliance: [], bridge: [] };
   const seen = new Set<string>();
   const add = (group: ClusterId | "bridge", a: number, b: number) => {
     const key = a < b ? `${a}-${b}` : `${b}-${a}`;
@@ -65,7 +65,7 @@ export function buildAgentGraph(): AgentGraph {
   };
 
   const indices = points.map((_, i) => i);
-  (["onboarding", "compliance"] as ClusterId[]).forEach((id) => {
+  (["qagent", "compliance"] as ClusterId[]).forEach((id) => {
     const members = indices.filter((i) => cluster[i] === id);
     members.forEach((i) => nearest(i, members, i % 2 ? 2 : 3).forEach((j) => add(id, i, j)));
   });
@@ -74,7 +74,7 @@ export function buildAgentGraph(): AgentGraph {
     .forEach((i) => {
       const others = indices.filter((j) => cluster[j] === null);
       nearest(i, others, 2).forEach((j) => add("bridge", i, j));
-      (["onboarding", "compliance"] as ClusterId[]).forEach((id) => {
+      (["qagent", "compliance"] as ClusterId[]).forEach((id) => {
         nearest(i, indices.filter((j) => cluster[j] === id), 1).forEach((j) => add("bridge", i, j));
       });
     });
@@ -86,6 +86,6 @@ export function buildAgentGraph(): AgentGraph {
     cluster,
     phase: new Float32Array(points.map(() => random() * Math.PI * 2)),
     size: new Float32Array(points.map((_, i) => (cluster[i] ? 0.06 + random() * 0.06 : 0.05))),
-    edges: { onboarding: toArray(pairs.onboarding), compliance: toArray(pairs.compliance), bridge: toArray(pairs.bridge) },
+    edges: { qagent: toArray(pairs.qagent), compliance: toArray(pairs.compliance), bridge: toArray(pairs.bridge) },
   };
 }

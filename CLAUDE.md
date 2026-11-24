@@ -18,7 +18,7 @@ Also `/classic` (no WebGL) and `/work/[slug]` (case studies).
 - Don't use "AI/ML" in the job title unless the owner confirms it. The title is a placeholder for now.
 - All copy lives in `src/data/content.ts`. Components never hard-code copy.
 - The employer is always **"a large real estate firm"**. Never show its name, or any internal database, schema or table names.
-- **Dates only where the owner gave them:** Elitenex Jan 2026, Masstech Apr 2026, OVI Oct 2026, plus the two role ranges. No other project dates.
+- **Dates only where the owner gave them:** Elitenex Jan 2026, Masstech Apr 2026, OVI Oct 2026. No other dates (Experience has no dates or timeline). No résumé anywhere on the site.
 - Don't present Masstech's company stats (years, projects, clients) as Yogesh's achievements.
 - LocalPilot: always separate **Built** from **In progress**.
 - Times are shown in **IST**. No education section.
@@ -56,7 +56,7 @@ Before upgrading a major version, check `npm view <pkg> peerDependencies`.
 src/app/                    page.tsx (journey), classic/, work/[slug]/, @modal (intercepted case study), layout, not-found
 src/components/sections/    one component per chapter (BootSection … ContactSection)
 src/components/classic/     Classic View blocks
-src/components/ui/          Header, ChapterNav, Cursor, ProjectCard, StatusBadge, CaseStudy, MetricCounter, Timeline, Terminal, Txt…
+src/components/ui/          Header, ChapterNav, Cursor, ProjectCard, StatusBadge, CaseStudy, MetricCounter, ExperienceList, Terminal, Txt…
 src/components/three/       Experience.tsx (Canvas), CameraRig.tsx, path.ts, stations/*
 src/data/content.ts         ALL copy: profile, chapters, projects + case studies, metrics, skills, experience
 src/store/                  zustand stores (progress, active chapter, UI)

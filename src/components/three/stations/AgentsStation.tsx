@@ -2,7 +2,7 @@
 
 import { RoundedBox } from "@react-three/drei";
 import { useLayoutEffect, useMemo, useRef } from "react";
-import { Color, MathUtils, Object3D, type Group, type InstancedMesh, type LineBasicMaterial, type Mesh, type MeshStandardMaterial, type Sprite } from "three";
+import { Color, MathUtils, Object3D, type Group, type InstancedMesh, type LineBasicMaterial, type MeshBasicMaterial, type Sprite } from "three";
 import { Envelope } from "@/components/three/Envelope";
 import { Glow } from "@/components/three/Glow";
 import { Label } from "@/components/three/Label";
@@ -15,14 +15,15 @@ import { getProject, sceneLabels } from "@/data/content";
 
 const INDEX = stationIndex("agents");
 
-/** "People" the Onboarding Agent notifies (reminder pings fly to them). */
-const PEOPLE: [number, number, number][] = [
-  [-4.4, 1.6, 0.4],
-  [-4.6, -0.2, 0.8],
-  [-3.8, -1.9, 0.2],
-  [-3.1, 2.4, -0.4],
-];
-const PING_PERIOD = 2.4;
+/** QAgent: a test report that flies in and gets checked; three rows, the middle one fails. */
+const REPORT_POS: [number, number, number] = [-4.4, -0.3, 0.6];
+const REPORT_FROM: [number, number, number] = [-8, 3, 1.5];
+const CHECK_ROWS = [0.28, 0, -0.28];
+const FAIL_ROW = 1;
+/** Seconds: fly in → three checks light up → reply flies out with "View report" → reset. */
+const QAGENT_CYCLE = 6.5;
+const CHECK_AT = [1.4, 1.9, 2.4];
+const REPLY = { start: 3.0, end: 4.6 };
 
 /** Compliance: a small table that receives a new field. */
 const TABLE_POS: [number, number, number] = [4.3, -0.6, 0.6];
@@ -31,7 +32,8 @@ const COMPLIANCE_CYCLE = 6;
 
 /**
  * 06 — The Agents. An "AI brain": two clusters of thinking nodes, one per agent, joined by a bridge.
- *  - Onboarding (left): reminder pings fly out to "people" nodes.
+ *  - QAgent (left): a test report flies in, its checks light up (pass / fail), and the reply
+ *    envelope flies back out with a small "View report" button.
  *  - Compliance (right): an envelope flies in and a new field row slides into a table.
  * Hover (desktop) or tap (touch) a cluster to highlight it and its connections.
  */
@@ -39,9 +41,11 @@ export function AgentsStation() {
   const { palette, glow } = useScene();
   const graph = useMemo(() => buildAgentGraph(), []);
   const nodes = useRef<InstancedMesh>(null);
-  const lines = useRef<Record<ClusterId | "bridge", LineBasicMaterial | null>>({ onboarding: null, compliance: null, bridge: null });
-  const pings = useRef<(Mesh | null)[]>([]);
-  const people = useRef<(MeshStandardMaterial | null)[]>([]);
+  const lines = useRef<Record<ClusterId | "bridge", LineBasicMaterial | null>>({ qagent: null, compliance: null, bridge: null });
+  const report = useRef<Group>(null);
+  const checks = useRef<(MeshBasicMaterial | null)[]>([]);
+  const reply = useRef<Group>(null);
+  const replyLabel = useRef<Sprite>(null);
   const envelope = useRef<Group>(null);
   const newRow = useRef<Group>(null);
   const newRowLabel = useRef<Sprite>(null);
@@ -49,14 +53,14 @@ export function AgentsStation() {
   const focus = useRef<{ target: ClusterId | null; manual: ClusterId | null; level: Record<ClusterId, number> }>({
     target: null,
     manual: null,
-    level: { onboarding: 0, compliance: 0 },
+    level: { qagent: 0, compliance: 0 },
   });
   const scratch = useRef({ dummy: new Object3D(), color: new Color() });
   const scrub = useRef({ value: 0 });
   const count = graph.cluster.length;
 
   const base = useMemo<Record<ClusterId | "bridge", Color>>(
-    () => ({ onboarding: palette.color.gold, compliance: palette.color["accent-2"], bridge: palette.color.accent }),
+    () => ({ qagent: palette.color.gold, compliance: palette.color["accent-2"], bridge: palette.color.accent }),
     [palette],
   );
 
@@ -82,12 +86,12 @@ export function AgentsStation() {
     if (sp !== null) {
       // Mobile stage: the clusters light up in turn with the scroll; a tap pins one.
       if (weight < 0.5) f.manual = null;
-      f.target = f.manual ?? (sp < 0.5 ? "onboarding" : "compliance");
+      f.target = f.manual ?? (sp < 0.5 ? "qagent" : "compliance");
     }
-    (["onboarding", "compliance"] as ClusterId[]).forEach((id) => {
+    (["qagent", "compliance"] as ClusterId[]).forEach((id) => {
       f.level[id] = MathUtils.damp(f.level[id], f.target === id ? 1 : 0, 5, delta);
     });
-    const anyFocus = Math.max(f.level.onboarding, f.level.compliance);
+    const anyFocus = Math.max(f.level.qagent, f.level.compliance);
 
     // Nodes "think": each pulses on its own phase. Focused cluster brightens, others dim.
     const mesh = nodes.current;
@@ -110,19 +114,40 @@ export function AgentsStation() {
       material.opacity = (0.28 + lit * 0.55) * (1 - (anyFocus - lit) * 0.5);
     });
 
-    // Onboarding: reminder pings travel from the cluster to each person, staggered.
-    const [cx, cy, cz] = CLUSTER_CENTERS.onboarding;
-    PEOPLE.forEach((p, i) => {
-      const k = ((time + i * (PING_PERIOD / PEOPLE.length)) % PING_PERIOD) / PING_PERIOD;
-      const ping = pings.current[i];
-      if (ping) {
-        ping.position.set(cx + (p[0] - cx) * k, cy + (p[1] - cy) * k + Math.sin(k * Math.PI) * 0.4, cz + (p[2] - cz) * k);
-        ping.scale.setScalar(Math.sin(k * Math.PI) * 1.2 + 0.2);
-      }
-      // The person node flashes as a ping arrives.
-      const material = people.current[i];
-      if (material) material.emissiveIntensity = (0.5 + Math.max(0, 1 - Math.abs(k - 0.95) * 8) * 2.5) * glow * 0.6;
+    // QAgent: report flies in → checks light up one by one → reply envelope (with its
+    // "View report" button) flies back out → reset. Mobile: scrubbed in the first half.
+    const q = sp !== null ? MathUtils.clamp(sp / 0.45, 0, 1) * (QAGENT_CYCLE - 1.2) : weight > 0.5 ? time % QAGENT_CYCLE : 0;
+    const arrive = MathUtils.smootherstep(q, 0, 1.2);
+    if (report.current) {
+      report.current.visible = q > 0.02 && q < QAGENT_CYCLE - 0.05;
+      report.current.position.set(
+        MathUtils.lerp(REPORT_FROM[0], REPORT_POS[0], arrive),
+        MathUtils.lerp(REPORT_FROM[1], REPORT_POS[1], arrive),
+        MathUtils.lerp(REPORT_FROM[2], REPORT_POS[2], arrive),
+      );
+      report.current.scale.setScalar((0.6 + arrive * 0.4) * (1 - MathUtils.smoothstep(q, QAGENT_CYCLE - 0.7, QAGENT_CYCLE)));
+    }
+    CHECK_AT.forEach((at, i) => {
+      const material = checks.current[i];
+      if (!material) return;
+      const on = MathUtils.smoothstep(q, at, at + 0.25);
+      material.color.copy(i === FAIL_ROW ? palette.color["accent-2"] : palette.color.gold).multiplyScalar(0.12 + on * glow * 1.5);
     });
+    // The reply leaves the cluster on an arc and speeds up as it flies away.
+    const out = MathUtils.clamp((q - REPLY.start) / (REPLY.end - REPLY.start), 0, 1);
+    const [cx, cy, cz] = CLUSTER_CENTERS.qagent;
+    const ex = cx + (REPORT_FROM[0] + 1 - cx) * out * out;
+    const ey = cy + (REPORT_FROM[1] - 0.4 - cy) * out * out + Math.sin(out * Math.PI) * 0.6;
+    const ez = cz + (REPORT_FROM[2] - cz) * out * out;
+    const flying = out > 0 && out < 1;
+    if (reply.current) {
+      reply.current.visible = flying;
+      reply.current.position.set(ex, ey, ez);
+    }
+    if (replyLabel.current) {
+      replyLabel.current.position.set(ex, ey - 0.45, ez);
+      replyLabel.current.material.opacity = flying ? Math.min(1, out * 6) * (1 - MathUtils.smoothstep(out, 0.8, 1)) : 0;
+    }
 
     // Compliance: envelope flies in → new field row slides into the table → holds → resets.
     // Mobile: the compliance story (email in → new field) is scrubbed in the second half.
@@ -158,7 +183,7 @@ export function AgentsStation() {
     },
   });
 
-  const titles = { onboarding: getProject("onboarding-agent")?.title ?? "", compliance: getProject("compliance-agent")?.title ?? "" };
+  const titles = { qagent: getProject("qagent")?.title ?? "", compliance: getProject("compliance-agent")?.title ?? "" };
 
   return (
     <Station ref={ref} id="agents">
@@ -200,31 +225,42 @@ export function AgentsStation() {
         </group>
       ))}
 
-      {/* Onboarding: people + reminder pings. */}
-      {PEOPLE.map((p, i) => (
-        <group key={i}>
-          <mesh position={p}>
-            <sphereGeometry args={[0.11, 20, 20]} />
-            <meshStandardMaterial
-              ref={(m) => {
-                people.current[i] = m;
-              }}
-              color={palette.color.heading}
-              emissive={palette.color.heading}
-              emissiveIntensity={0.6}
-              toneMapped={false}
-            />
-          </mesh>
-          <mesh
-            ref={(m) => {
-              pings.current[i] = m;
-            }}
-          >
-            <sphereGeometry args={[0.06, 12, 12]} />
-            <meshBasicMaterial color={palette.color.gold.clone().multiplyScalar(glow * 1.6)} toneMapped={false} />
-          </mesh>
-        </group>
-      ))}
+      {/* QAgent: the test report (page, title line, three rows with a check mark each) and the reply. */}
+      <group ref={report} position={REPORT_FROM} visible={false}>
+        <RoundedBox args={[1.05, 1.35, 0.05]} radius={0.04} smoothness={2}>
+          <meshStandardMaterial color={palette.color.surface} emissive={palette.color.gold} emissiveIntensity={0.18} toneMapped={false} />
+        </RoundedBox>
+        <mesh position={[-0.12, 0.5, 0.04]}>
+          <planeGeometry args={[0.6, 0.07]} />
+          <meshBasicMaterial color={palette.color.heading} toneMapped={false} />
+        </mesh>
+        {CHECK_ROWS.map((y, i) => (
+          <group key={y} position={[0, y, 0.04]}>
+            <mesh position={[-0.12, 0, 0]}>
+              <planeGeometry args={[0.6, 0.035]} />
+              <meshBasicMaterial color={palette.color["border-strong"]} toneMapped={false} />
+            </mesh>
+            <mesh position={[0.34, 0, 0.01]}>
+              <circleGeometry args={[0.07, 20]} />
+              <meshBasicMaterial
+                ref={(m) => {
+                  checks.current[i] = m;
+                }}
+                toneMapped={false}
+              />
+            </mesh>
+          </group>
+        ))}
+      </group>
+      <Envelope ref={reply} size={0.5} />
+      <Label
+        ref={replyLabel}
+        text={sceneLabels.viewReport}
+        color={palette.css.gold}
+        height={0.2}
+        pill={{ fill: palette.css.bg, border: palette.css.gold }}
+        opacity={0}
+      />
 
       {/* Compliance: the table that receives a new field. */}
       <group position={TABLE_POS}>

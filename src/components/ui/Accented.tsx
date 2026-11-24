@@ -9,7 +9,7 @@ interface AccentedProps {
 
 /**
  * Renders `text`, painting the first occurrence of `accent` with the signature gradient.
- * Used for headline accent words ("I connect apps, data and AI agents.").
+ * Used for headline accent words ("I build full-stack websites, automations and AI agents.").
  */
 export function Accented({ text, accent, accentClassName }: AccentedProps) {
   const index = accent ? text.indexOf(accent) : -1;

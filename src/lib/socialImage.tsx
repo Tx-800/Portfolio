@@ -56,7 +56,7 @@ export function renderSocialImage(): ImageResponse {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", fontFamily: "Sora", fontSize: 78, lineHeight: 1.02, letterSpacing: -2.5 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", fontFamily: "Sora", fontSize: 64, lineHeight: 1.04, letterSpacing: -2 }}>
               <span>{lead}</span>
               {accent && <span style={{ color: BRAND.accent }}>{accent}</span>}
             </div>

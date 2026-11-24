@@ -2,7 +2,7 @@ import { ClassicSection } from "@/components/classic/ClassicSection";
 import { ContactLinks } from "@/components/ui/ContactLinks";
 import { MetricGrid } from "@/components/ui/MetricGrid";
 import { SkillGroups } from "@/components/ui/SkillGroups";
-import { Timeline } from "@/components/ui/Timeline";
+import { ExperienceList } from "@/components/ui/ExperienceList";
 import { experience, getChapter, skillGroups } from "@/data/content";
 
 export function ClassicImpact() {
@@ -25,7 +25,7 @@ export function ClassicSkills() {
 export function ClassicExperience() {
   return (
     <ClassicSection id="experience" number="04" label="Experience" title="Experience">
-      <Timeline items={experience} className="max-w-3xl" />
+      <ExperienceList items={experience} />
     </ClassicSection>
   );
 }

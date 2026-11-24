@@ -10,7 +10,7 @@ const groups: { title: string; description: string; groups: ProjectGroup[] }[] =
   },
   {
     title: "Websites & products",
-    description: "Freelance client work, my own product and a practice build.",
+    description: "Freelance client work and portfolio projects.",
     groups: ["product", "web"],
   },
 ];

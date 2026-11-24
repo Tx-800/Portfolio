@@ -58,10 +58,10 @@ Hero headline: `text-wrap: balance`, "AI agents." never splits → 3 lines at 36
 - **Header:** wordmark, Classic/Immersive toggle (secondary pill), **"Let's talk"** CTA as a solid `heading`-coloured pill with dark text.
 - **Primary button:** `bg-plasma` pill, dark text, orange glow (`shadow-glow`). Hover brightens the glow.
 - **Secondary button:** pill, 1px `border-strong`, light text.
-- **StatusBadge:** small mono pill, gold text on gold/10. The dot pulses for "In development" and is a ring for "Practice project".
+- **StatusBadge:** small mono pill, gold text on gold/10. The dot pulses for "In development" and is a ring for "Portfolio project".
 - **ProjectCard:** `card` (surface, border, pink shadow), badge + date, title, context, tagline, ≤ 4 tech chips + "+N", a visible "Read case study" affordance. Hover lifts 4px.
 - **MetricCounter:** translucent `panel`, label, struck-through *before* → big **gold** mono *after*.
-- **Timeline:** `border-strong` line, gradient dots, gold mono dates.
+- **ExperienceList:** one block per role (title + org on the left, bullet points on the right), dividers between. No dates, no timeline.
 - **CaseStudy:** header with ambient glow, sticky TOC (≥ 1024px), numbered sections, flow steps, result tiles, screenshot placeholders or a flow diagram, "Next case study".
 - **Icons:** lucide-react, 18–20px. GitHub/LinkedIn are inline outlines in the same style. No emoji.
 
@@ -86,7 +86,7 @@ Hero headline: `text-wrap: balance`, "AI agents." never splits → 3 lines at 36
 | 3 | Cockpit with small screens | Screens light up orange one by one |
 | 4 | Glowing tubes → faceted glass cube | Inner table slabs refresh with a warm light sweep |
 | 5 | Scanner ring over tables | Fresh slabs glow **orange**; one turns **cold blue** (stale) → envelope → "schema change detected" |
-| 6 | Node network, 2 clusters (Onboarding, Compliance) | Orange/pink pulses; hover/tap a cluster; an HR email arrives and pings fly to "people" nodes for Onboarding; an envelope arrives and a field slots in for Compliance |
+| 6 | Node network, 2 clusters (QAgent, Compliance) | Orange/pink pulses; hover/tap a cluster; for QAgent a test report flies in, its checks light up (pass / fail) and a reply envelope with a "View report" pill flies out; an envelope arrives and a field slots in for Compliance |
 | 7 | Floating dashboard | Lights up; HTML metrics count up in gold |
 | 8 | Skill-label cluster | Drag to rotate; the packet orbits it |
 | 9 | Inbox / envelope | Packet flies in; the envelope glows |

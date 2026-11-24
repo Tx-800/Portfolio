@@ -23,7 +23,7 @@ export type ChapterId =
   | "builder"
   | "contact";
 
-export type ProjectStatus = "in-production" | "freelance-live" | "in-development" | "practice";
+export type ProjectStatus = "in-production" | "freelance-live" | "in-development" | "portfolio";
 export type ProjectGroup = "agents" | "data" | "product" | "web";
 
 export interface Chapter {
@@ -102,6 +102,8 @@ export interface Project {
   tagline: string;
   summary: string;
   tech: string[];
+  /** 3–5 short feature lines shown on the card (websites and agents). */
+  highlights?: string[];
   links: ProjectLinks;
   caseStudy: CaseStudy;
 }
@@ -119,11 +121,12 @@ export interface SkillGroup {
   skills: { name: string; note?: string }[];
 }
 
+/** No dates: the experience section describes the work, not a timeline. */
 export interface ExperienceItem {
-  /** Roles have a date range; projects never show dates. */
-  period?: string;
   title: string;
   org: string;
+  /** One short line for the mobile Data Core beat (≤ ~15 words). */
+  short: string;
   points: string[];
 }
 
@@ -132,8 +135,6 @@ export interface Contact {
   /** null = not provided yet; rendered as a highlighted placeholder. */
   github: string | null;
   linkedin: string | null;
-  /** Add the PDF at public/resume.pdf. The link 404s until the file exists. */
-  resume: string;
 }
 
 /* ---------------------------------------------------------------- profile */
@@ -141,16 +142,15 @@ export interface Contact {
 export const profile = {
   name: "Yogesh Gangarde",
   role: "Full-Stack Developer",
-  focus: "Web apps, data pipelines and AI agents",
-  headline: "I connect apps, data and AI agents.",
+  focus: "Websites · Automations · Data platforms · AI agents",
+  headline: "I build full-stack websites, automations and AI agents.",
   headlineAccent: "AI agents.",
   intro: [
-    "I build the whole path data travels — from the websites people use, through Snowflake pipelines, to the AI agents that act on it.",
-    "Today I build AI agents, workflow automation and a Snowflake data platform at a large real estate firm.",
+    "Full-stack developer at a large real estate firm, building web apps, workflow automations, Snowflake data platforms and AI agents — plus business websites for freelance clients.",
   ],
   /** Used for SEO descriptions and the Classic View summary. */
   summary:
-    "Full-stack developer building web apps, data pipelines and AI agents — MERN, Next.js, .NET, Python, Snowflake and the OpenAI API.",
+    "Full-stack developer building websites, workflow automations, Snowflake data platforms and AI agents — at a large real estate firm and for freelance clients.",
   currently: "Full-Stack Developer at a large real estate firm",
   stackHighlights: ["React / Next.js", "Node.js / Express", ".NET / C#", "Python", "Snowflake", "OpenAI API"],
 } as const;
@@ -159,7 +159,6 @@ export const contact: Contact = {
   email: "yogeshgangarde12@gmail.com",
   github: null, // [placeholder: GitHub URL]
   linkedin: null, // [placeholder: LinkedIn URL]
-  resume: "/resume.pdf",
 };
 
 /* --------------------------------------------------------------- chapters */
@@ -181,7 +180,7 @@ export const chapters: Chapter[] = [
     accent: profile.headlineAccent,
     intro: profile.intro[0],
     inRail: true,
-    beats: ["Web apps, data pipelines and AI agents.","From websites, through Snowflake pipelines, to AI agents.","Scroll to follow the data."],
+    beats: ["Websites, automations and AI agents.","From websites, through Snowflake pipelines, to AI agents.","Scroll to follow the data."],
   },
   {
     id: "websites",
@@ -190,7 +189,7 @@ export const chapters: Chapter[] = [
     heading: "Where data is born",
     accent: "born",
     intro:
-      "Every pipeline starts with a product people use. These are websites and web systems I designed and built for clients — plus one practice build.",
+      "Every pipeline starts with a product people use. These are websites and web systems I designed and built for clients — plus one portfolio project.",
     inRail: true,
   },
   {
@@ -200,7 +199,7 @@ export const chapters: Chapter[] = [
     heading: "One cockpit, many businesses",
     accent: "many businesses",
     intro:
-      "LocalPilot is my own product: one dashboard for managing many local businesses' Google Business Profiles, with AI features on the way.",
+      "LocalPilot is a portfolio project I'm building: one dashboard for managing many local businesses' Google Business Profiles, with AI features on the way.",
     inRail: true,
     beats: ["One dashboard for many Google Business Profiles.","Built: profile checks, updates and posts per business.","In progress: AI captions and images."],
   },
@@ -233,9 +232,9 @@ export const chapters: Chapter[] = [
     heading: "Agents that do the busywork",
     accent: "busywork",
     intro:
-      "Two agents that automate employee onboarding and compliance updates — and keep the right people in the loop.",
+      "Two agents that take over manual work: QAgent analyses test reports and emails the result, and the Compliance Agent adds new database fields from a single email.",
     inRail: true,
-    beats: ["Onboarding: ~2 days → 3–5 minutes.","Compliance fields, added by email.","Tap a cluster to focus it."],
+    beats: ["QAgent: test reports analysed, result emailed.","Compliance fields, added by one email.","Tap a cluster to focus it."],
   },
   {
     id: "impact",
@@ -276,7 +275,7 @@ export const railChapters = chapters.filter((chapter) => chapter.inRail);
 export const boot = {
   lines: ["> initializing pipeline…", "> loading projects… ok", "> connecting to Yogesh Gangarde… ok"],
   startLabel: "Start the journey",
-  skipLabel: "Skip to résumé",
+  skipLabel: "Skip to projects",
   commands: [
     { name: "help", description: "List available commands" },
     { name: "about", description: "Jump to The Spark" },
@@ -298,15 +297,75 @@ export const boot = {
 
 /* ---------------------------------------------------------------- UI text */
 
-/** Mobile flow prototype (/flow): toy hints and buttons. */
-export const flowText = {
-  prototypeNote: "Mobile prototype · Spark → Websites → Pipeline",
-  sparkCaption: "Web apps, data pipelines and AI agents — built end to end.",
-  sparkHint: "Drag the packet",
-  websitesHint: "Swipe to switch sites",
-  openCaseStudy: "Open case study",
-  refresh: "Refresh the tables",
-  refreshHint: "Sends new data through the pipeline",
+/** A tiny fact floating beside the Data Core. `detail` (optional) shows when it's tapped. */
+export interface Satellite {
+  label: string;
+  detail?: string;
+}
+
+/**
+ * Mobile "Data Core" layout (prototype at /flow): fixed UI and the short texts
+ * placed around the Core. Short versions of facts that exist in full in the projects above;
+ * keep at most ~25 words on screen per beat.
+ */
+export const coreText = {
+  prototypeNote: "Mobile prototype v4 · Data Core",
+  menu: "Menu",
+  closeMenu: "Close menu",
+  menuTitle: "Chapters",
+  fullJourney: "Full journey",
+  classicView: "Classic view",
+  scrollHint: "Scroll to continue",
+  readCaseStudy: "Read case study",
+  dragHint: "Drag the core",
+  cockpitHeading: ["One dashboard,", "many businesses"],
+  built: "Built",
+  inProgress: "In progress",
+  /** Satellites per website (details are the projects' own feature lines, shortened). */
+  siteSatellites: {
+    "ovi-iot-solutions": [
+      { label: "7 solutions", detail: "Seven solution pages, from smart water metering to ATEX zone sensors." },
+      { label: "8 sectors", detail: "Eight sector pages, from apartments to irrigation & agriculture." },
+      { label: "Enquiry form", detail: "Contact form with an “area of interest” dropdown." },
+    ],
+    "masstech-business-solutions": [
+      { label: "Careers system", detail: "Candidates submit their profile and résumé through a careers form." },
+      { label: "Auto emails", detail: "A confirmation to every applicant, and an email to HR with the résumé attached." },
+      { label: "Excel export", detail: "Admin dashboard listing all applicants, with filters and one-click export to Excel." },
+    ],
+    elitenex: [
+      { label: "Course listing", detail: "Every course listed with its key details." },
+      { label: "Syllabus leads", detail: "Students share their contact details before the syllabus PDF is delivered." },
+      { label: "Chatbot", detail: "Rule-based chatbot that answers common student questions." },
+    ],
+  } as Record<string, Satellite[]>,
+  /** Four of the stack highlights, floating around the orb. */
+  sparkSatellites: ["React / Next.js", "Python", "Snowflake", "OpenAI API"],
+  /** LocalPilot, short: Built vs In progress (full lists in the case study). */
+  localpilotBuilt: [
+    "Next.js + Supabase platform",
+    "Multi-business dashboard",
+    "Profile checks & updates",
+    "Post writing",
+    "Approval step [confirm: built or in progress]",
+  ],
+  localpilotInProgress: ["AI captions & images (OpenAI API)", "Rotating topics & styles"],
+  pipelineHeading: ["Data that", "refreshes itself."],
+  pipelineSources: ["MySQL", "MongoDB", "Ad spend"],
+  pipelineFlow: ["Sources", "Raw → Curated"],
+  watchtowerDaily: ["Checks freshness", "daily."],
+  watchtowerStale: ["Stale over 24h?", "Email sent."],
+  watchtowerCause: ["Cause diagnosed", "with AI."],
+  freshness: ["Fresh < 24h", "Stale > 24h"],
+  /** Agent clusters: tap targets that focus one cluster of the network. */
+  clusters: ["QAgent", "Compliance"],
+  clusterHint: "Tap a cluster to focus it",
+  /** Impact, first beat: the before in outline (struck through), the after huge in the gradient. */
+  impactCompliance: { label: "Compliance fields", before: "Many people", beforeNote: "+ a developer", after: "One email", note: "No developer, no back-and-forth." },
+  builderHeading: "The toolkit",
+  spinHint: "Drag to spin",
+  contactRing: "Let's build something",
+  links: { email: "Email", github: "GitHub", linkedin: "LinkedIn" },
 } as const;
 
 export const notFoundText = {
@@ -329,6 +388,7 @@ export const sceneLabels = {
   stale: "stale > 24h",
   staleDiagnosis: "schema change detected",
   newField: "new field",
+  viewReport: "View report",
 } as const;
 
 /* --------------------------------------------------------------- statuses */
@@ -337,7 +397,7 @@ export const statusLabels: Record<ProjectStatus, string> = {
   "in-production": "In production",
   "freelance-live": "Freelance · Live",
   "in-development": "In development",
-  practice: "Practice project",
+  portfolio: "Portfolio project",
 };
 
 const FIRM = "Built at a large real estate firm";
@@ -355,10 +415,11 @@ export const projects: Project[] = [
     status: "freelance-live",
     date: "Oct 2026",
     context: "Freelance client",
-    tagline: "A business website for an end-to-end IoT solutions company.",
+    tagline: "Business website for a leading end-to-end IoT solutions company.",
     summary:
       "A multi-page site presenting LoRaWAN and NB-IoT solutions for cities, utilities and industrial operators — 7 solution pages, 8 sector pages and dedicated service pages.",
-    tech: ["HTML", "Custom CSS", "JavaScript"],
+    tech: ["HTML", "CSS", "JavaScript", "Bootstrap"],
+    highlights: ["7 solution pages and 8 sector pages", "Service pages", "Solution architecture section", "Lead form with an “area of interest” dropdown"],
     links: { live: "https://ovi-iot-solutions.vercel.app/" },
     caseStudy: {
       overview:
@@ -406,29 +467,35 @@ export const projects: Project[] = [
     status: "freelance-live",
     date: "Apr 2026",
     context: "Freelance client",
-    tagline: "A company website with a working careers system.",
+    tagline: "Corporate website with a working careers system that automates the hiring inbox.",
     summary:
-      "A company website for an IT solutions provider, plus a careers system that emails candidates and HR automatically and gives admins a filterable, exportable applicant dashboard.",
-    tech: ["Custom CSS", "JavaScript", "PHP form handling", "SMTP email"],
+      "Corporate website for an IT solutions provider. Beyond showcasing their services, it runs a careers system: automatic emails to applicants and HR, and an admin dashboard with filters and Excel export.",
+    tech: ["Custom CSS", "JavaScript", "PHP", "SMTP email"],
+    highlights: [
+      "Service pages for each offering",
+      "Careers form with résumé upload",
+      "Automatic emails to the applicant and to HR",
+      "Admin dashboard with filters and Excel export",
+    ],
     links: { live: "https://masstechbusiness.com/" },
     caseStudy: {
       overview:
-        "Masstech Business Solutions is an IT solutions provider offering application development, database management, mobility, IT consulting & outsourcing, and Microsoft SharePoint & Dynamics services. I built their company website and a working careers system as a freelance project.",
+        "Corporate website for Masstech Business Solutions, an IT solutions provider offering application development, database management, mobility solutions, IT consulting & outsourcing, and Microsoft SharePoint & Dynamics. Beyond showcasing their services, I built a working careers system that automates their hiring inbox.",
       problem: [
-        "Masstech needed a company website to present its services, and a careers system to collect applications and manage every applicant in one place.",
+        "Masstech needed a corporate website to present its services, and a way to handle job applications without sorting through the hiring inbox by hand.",
       ],
       built: [
-        "A company website presenting Masstech's services, with a glassmorphism visual style.",
-        "A careers system: candidates submit their profile and résumé; the system emails a confirmation to the candidate and emails HR with the résumé attached.",
-        "A login-protected admin dashboard that lists every applicant with their details, with filters and export to Excel.",
+        "A corporate website with a page presenting each of Masstech's offerings.",
+        "A careers system: candidates submit their profile and résumé; the system emails a confirmation to the applicant and emails HR with the résumé attached.",
+        "A login-protected admin dashboard that lists every applicant with their details, with filters and one-click export to Excel for the HR team.",
       ],
       features: [
-        "Application form: name, contact details, position, experience, notice period, current and expected CTC, résumé upload (PDF, DOC, DOCX up to 5 MB)",
-        "Automatic confirmation email to the candidate",
-        "Automatic email to HR with the résumé attached",
-        "Admin dashboard behind a login",
-        "Applicant list with filters",
-        "Export to Excel",
+        "Service pages presenting each of their offerings",
+        "Careers form where candidates submit their profile and résumé",
+        "Automatic confirmation email to every applicant",
+        "Automatic email to HR with the candidate's résumé attached",
+        "Admin dashboard listing all applicants with their details",
+        "Filters and one-click export to Excel for the HR team",
       ],
       flow: [
         { title: "Apply", detail: "A candidate fills in their profile and uploads a résumé on the careers page." },
@@ -454,32 +521,38 @@ export const projects: Project[] = [
     title: "Elitenex",
     group: "web",
     chapter: "websites",
-    status: "practice",
+    status: "portfolio",
     date: "Jan 2026",
-    context: "Personal project",
-    tagline: "An ed-tech website with lead capture and a student chatbot.",
+    context: "Ed-tech course website",
+    tagline: "Course-showcase website that turns visitors into leads, with a built-in chatbot.",
     summary:
-      "A course showcase where students download a syllabus after sharing their contact details, with a small chatbot that answers basic questions.",
+      "Course-showcase website for an ed-tech brand. Students browse the courses, download a detailed syllabus after sharing their contact details, and get instant answers from a built-in chatbot.",
     tech: ["HTML", "CSS", "JavaScript"],
+    highlights: [
+      "Course listing with key details",
+      "Syllabus download with lead capture",
+      "Rule-based chatbot for student questions",
+      "Glassmorphism UI, fully responsive",
+    ],
     links: { comingSoon: true },
     caseStudy: {
       overview:
-        "Elitenex is a practice project: an ed-tech website that showcases the available courses to students.",
+        "Course-showcase website for an ed-tech brand. Students can browse the available courses, download a detailed syllabus after sharing their contact details — turning visitors into leads — and get instant answers from a built-in chatbot.",
       problem: [
         "A course website needs to turn interested students into leads, while answering the questions they ask most often.",
       ],
       built: [
-        "A website showcasing the available courses.",
-        "A “Download syllabus” flow: the student enters their contact details first, then receives the syllabus PDF.",
-        "A small rule-based chatbot that answers basic student queries.",
-        "A glassmorphism visual style with smooth-scrolling effects.",
+        "A course listing with the key details of each course.",
+        "A “Download syllabus” flow: the student shares their contact details first, then receives the syllabus PDF.",
+        "A rule-based chatbot that answers common student questions.",
+        "A glassmorphism UI with smooth scrolling and a fully responsive layout.",
       ],
       features: [
-        "Course showcase",
-        "Lead capture before every syllabus download",
-        "Syllabus delivered as a PDF",
-        "Rule-based chatbot for basic student queries",
-        "Glassmorphism design with smooth scrolling",
+        "Course listing with key details for each course",
+        "“Download syllabus” with lead capture before the PDF is delivered",
+        "Rule-based chatbot for common student questions",
+        "Glassmorphism UI with smooth scrolling",
+        "Fully responsive layout",
       ],
       flow: [
         { title: "Browse", detail: "Students explore the available courses." },
@@ -487,7 +560,7 @@ export const projects: Project[] = [
         { title: "Share details", detail: "They enter their contact details (lead capture)." },
         { title: "Receive", detail: "The syllabus PDF is delivered." },
       ],
-      role: "Designed and built as a personal practice project.",
+      role: "Designed and built as a portfolio project.",
       results: [
         { label: "Lead capture", after: "Every download", note: "Contact details collected before the syllabus" },
         { label: "Status", after: "Not deployed yet" },
@@ -506,7 +579,7 @@ export const projects: Project[] = [
     group: "product",
     chapter: "cockpit",
     status: "in-development",
-    context: "My product",
+    context: "Portfolio project",
     tagline: "The AI marketing cockpit for local businesses.",
     summary:
       "One dashboard to manage many Google Business Profiles — check and update profiles and write posts that improve each business's visibility. The platform is built; AI features are in progress.",
@@ -669,52 +742,54 @@ export const projects: Project[] = [
 
   /* ---------------------------------------------- Chapter 6: agents */
   {
-    slug: "onboarding-agent",
-    title: "Onboarding Agent",
+    slug: "qagent",
+    title: "QAgent",
     group: "agents",
     chapter: "agents",
     status: "in-production",
     context: FIRM,
-    tagline: "Employee onboarding, from ~2 days to 3–5 minutes.",
+    tagline: "Test reports analysed automatically, with the result emailed back and the full report one click away.",
     summary:
-      "HR emails the new joiners' details; an LLM-powered agent collects the data, stores it in Snowflake, keeps the responsible people on track and reports back to HR when it's done.",
-    tech: ["Snowflake", "Zapier", "LLM", "Email"],
+      "Analyses test reports for different items against predefined conditions, stores the analysis in Snowflake and replies by email with the result — plus a “View report” button for the full stored report.",
+    tech: ["Snowflake", "[confirm: other tools, e.g. Zapier / Gmail]"],
+    highlights: [
+      "Checks each test report against predefined conditions",
+      "Stores every analysis in Snowflake",
+      "Emails the result back to the user",
+      "“View report” button opens the full stored report",
+    ],
     links: {},
     caseStudy: {
       overview:
-        "The Onboarding Agent automates employee onboarding at a large real estate firm. HR sends the new joiners' details by email; the agent collects the data, stores it in Snowflake and replies to HR when the work is done. Onboarding that used to take around two days now completes in 3–5 minutes.",
-      problem: [
-        "Employee onboarding involved a series of tasks owned by different people, and took around two days to complete.",
-        "Each step depends on the responsible person finishing their task on time.",
-      ],
+        "QAgent analyses test reports for different items against predefined conditions. It stores the analysis in Snowflake and replies to the user by email with the result; the reply includes a “View report” button that opens the full stored report.",
+      problem: ["[placeholder: how test reports were checked before QAgent — e.g. by hand, and how long it took]"],
       built: [
-        "An LLM-powered agent, built on Snowflake and Zapier, that picks up onboarding requests HR sends to a connected email inbox.",
-        "It collects the new employees' data from the email and puts it into the Snowflake database.",
-        "Automatic notifications and reminders to the people responsible for each step, so tasks are done on time.",
-        "When the work is complete, the bot replies to HR with the number of people onboarded.",
+        "An agent that analyses each incoming test report against predefined conditions.",
+        "Every analysis is stored in Snowflake.",
+        "The user gets the result by email, with a “View report” button that opens the full stored report.",
       ],
       features: [
-        "Starts from a simple email by HR",
-        "Collects the new employees' data from the email",
-        "Stores it in the Snowflake database automatically",
-        "Notifications and reminders to each responsible person",
-        "Completion reply to HR with the number of people onboarded",
+        "Analysis against predefined conditions, for different items",
+        "Analysis stored in Snowflake",
+        "Result emailed back to the user automatically",
+        "“View report” button in the reply opens the full stored report",
       ],
       flow: [
-        { title: "Email", detail: "HR emails the new joiners' details to a connected inbox." },
-        { title: "Collect", detail: "The agent collects the employee data from the email." },
-        { title: "Store", detail: "The data goes into the Snowflake database." },
-        { title: "Notify", detail: "Each responsible person is notified and reminded of their task." },
-        { title: "Report", detail: "The bot replies to HR with the number of people onboarded." },
+        { title: "Receive", detail: "A test report comes in. [confirm: how reports arrive — e.g. by email]" },
+        { title: "Analyse", detail: "The agent checks it against the predefined conditions." },
+        { title: "Store", detail: "The analysis is stored in Snowflake." },
+        { title: "Reply", detail: "The result is emailed back to the user." },
+        { title: "View", detail: "“View report” opens the full stored report." },
       ],
       role: FIRM_ROLE,
       results: [
-        { label: "Onboarding time", before: "~2 days", after: "3–5 min" },
-        { label: "HR update", after: "Automatic", note: "Reply with the number of people onboarded" },
+        { label: "Analysis", after: "Automatic", note: "Each report checked against predefined conditions" },
+        { label: "Result", after: "By email", note: "With a “View report” button for the full report" },
+        { label: "Storage", after: "Snowflake", note: "Every analysis stored" },
       ],
       media: [
-        { kind: "diagram", alt: "HR email to agent to Snowflake to HR reply flow", caption: "Agent flow (internal tool — diagram only)" },
-        { kind: "screenshot", src: "/images/projects/onboarding-agent/hero.png", alt: "Onboarding Agent cover image", caption: "Cover", optional: true },
+        { kind: "diagram", alt: "Test report to analysis to Snowflake to email reply flow", caption: "Agent flow (internal tool — diagram only)" },
+        { kind: "screenshot", src: "/images/projects/qagent/hero.png", alt: "QAgent cover image", caption: "Cover", optional: true },
       ],
     },
   },
@@ -725,41 +800,47 @@ export const projects: Project[] = [
     chapter: "agents",
     status: "in-production",
     context: FIRM,
-    tagline: "New compliance fields, added by email — no developer needed.",
+    tagline: "New compliance fields, added by one email — no developer, no back-and-forth.",
     summary:
-      "Responsible people email the fields they need; the agent adds them to the database automatically and replies once they're added.",
+      "The person responsible emails the field they need; the agent adds it to the database automatically and replies once it's done.",
     tech: ["Snowflake", "Zapier", "Gmail"],
+    highlights: [
+      "Requests by plain email",
+      "Adds the new field to the database automatically",
+      "Replies once the field is added",
+      "No developer involved",
+    ],
     links: {},
     caseStudy: {
       overview:
-        "The Compliance Agent lets the people responsible for compliance add new database fields just by sending an email. The agent reads the request through Gmail, adds the fields automatically and replies once they're added, so a developer no longer has to be involved each time.",
+        "The Compliance Agent lets the person responsible for compliance add a new database field just by sending an email. The agent adds the field automatically and replies once it's done — no developer, no back-and-forth.",
       problem: [
         "Compliance requirements regularly introduce new fields that must be added to the database.",
-        "Every time, the responsible person had to contact a developer to add them.",
+        "Adding one meant coordinating with multiple people and waiting for a developer to change the database.",
       ],
       built: [
-        "An agent that reads field requests sent by email through Gmail.",
-        "It takes the field(s) that need to be added and adds them to the database automatically.",
-        "It then replies to confirm the field(s) were added.",
+        "An agent, built with Snowflake, Zapier and Gmail, that reads field requests sent by email.",
+        "It adds the requested field(s) to the database automatically.",
+        "It replies to the sender once the field(s) are added.",
       ],
       features: [
         "Requests by plain email — no tickets",
         "Reads incoming requests through Gmail",
         "Picks out the field(s) to add",
         "Adds the new field(s) to the database automatically",
-        "Replies to confirm once the field(s) are added",
+        "Replies once the field(s) are added",
       ],
       flow: [
-        { title: "Email", detail: "The responsible person describes the new field(s) in an email." },
+        { title: "Email", detail: "The person responsible describes the new field(s) in an email." },
         { title: "Read", detail: "The agent picks up the request through Gmail." },
         { title: "Extract", detail: "It takes the field(s) that need to be added." },
         { title: "Add", detail: "The new field(s) are added to the database." },
-        { title: "Confirm", detail: "The agent replies that the field(s) were added." },
+        { title: "Confirm", detail: "The agent replies once it's done." },
       ],
       role: FIRM_ROLE,
       results: [
-        { label: "Developer involvement", before: "Every new field", after: "Not needed", note: "Fields are added by email" },
-        { label: "Confirmation", after: "Automatic", note: "Reply once the fields are added" },
+        { label: "Adding a field", before: "Many people + a developer", after: "One email" },
+        { label: "Confirmation", after: "Automatic", note: "Reply once the field is added" },
       ],
       media: [
         { kind: "diagram", alt: "Email to Gmail to agent to database flow", caption: "Agent flow (internal tool — diagram only)" },
@@ -771,26 +852,26 @@ export const projects: Project[] = [
 
 /* ---------------------------------------------------------------- metrics */
 
+/** Impact: before → after statements, no invented numbers. */
 export const metrics: Metric[] = [
-  {
-    id: "onboarding",
-    label: "Employee onboarding",
-    before: "~2 days",
-    after: "3–5 min",
-    note: "Automated by the Onboarding Agent",
-  },
   {
     id: "compliance",
     label: "Compliance fields",
-    before: "Developer for every field",
-    after: "Added by email",
-    note: "No developer needed",
+    before: "Many people + a developer",
+    after: "One email",
+    note: "The agent adds the field and replies when it's done",
+  },
+  {
+    id: "qagent",
+    label: "Test reports",
+    after: "Answered automatically",
+    note: "Test reports analysed and answered automatically, with a link to the full report",
   },
   {
     id: "freshness",
     label: "Data freshness",
     after: "24-hour rule",
-    note: "Every table checked daily, with email alerts and a daily report",
+    note: "Every table checked daily against a 24-hour rule, with automatic alerts",
   },
 ];
 
@@ -831,29 +912,30 @@ export const skillGroups: SkillGroup[] = [
 
 export const experience: ExperienceItem[] = [
   {
-    period: "Sep 2026 – Present",
     title: "Full-Stack Developer",
     org: "A large real estate firm",
+    short: "AI agents, automations and the Snowflake data platform.",
     points: [
-      "Build AI agents that automate employee onboarding and compliance updates",
-      "Automate workflows with Zapier and Gmail integrations",
-      "Build the Snowflake data platform with dynamic tables, plus a Staleness Agent that monitors data freshness",
+      "Build AI agents and automations that remove manual work: Compliance Agent (new database fields added by email), QAgent (test report analysis with emailed results and stored reports) and Staleness Agent (daily data-freshness checks with AI diagnosis).",
+      "Build and maintain the Snowflake data platform: Python sync pipelines loading source systems into Snowflake, and dynamic tables that keep curated data up to date.",
+      "Develop internal full-stack web applications. [confirm: any to name]",
     ],
   },
   {
-    period: "Jan 2026 – Present",
     title: "Freelance Web Developer",
-    org: "Independent",
+    org: "Freelance clients",
+    short: "Business websites for OVI IoT Solutions and Masstech Business Solutions.",
     points: [
-      "Oct 2026 — OVI IoT Solutions: IoT business website",
-      "Apr 2026 — Masstech Business Solutions: company website and careers system",
+      "Design and build business websites for clients: OVI IoT Solutions (IoT company website) and Masstech Business Solutions (corporate website with a working careers system, automated emails and an HR admin dashboard).",
     ],
   },
   {
-    period: "Jan 2026",
-    title: "Elitenex",
-    org: "Personal project",
-    points: ["Ed-tech website with course showcase, syllabus lead capture and a student chatbot"],
+    title: "Portfolio projects",
+    org: "Own projects",
+    short: "LocalPilot, an AI marketing platform, and Elitenex, an ed-tech course website.",
+    points: [
+      "LocalPilot (AI marketing platform for local businesses, in development) and Elitenex (ed-tech course website).",
+    ],
   },
 ];
 

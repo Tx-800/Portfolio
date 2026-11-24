@@ -39,7 +39,7 @@ export function BootSection() {
             <ButtonLink href="#spark" icon={<ArrowDownIcon />}>
               {boot.startLabel}
             </ButtonLink>
-            <ButtonLink href="/classic" variant="secondary" icon={<ArrowRightIcon />}>
+            <ButtonLink href="#websites" variant="secondary" icon={<ArrowRightIcon />}>
               {boot.skipLabel}
             </ButtonLink>
           </div>

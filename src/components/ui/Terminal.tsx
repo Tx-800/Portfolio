@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowDownIcon, ArrowRightIcon } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef, type FormEvent } from "react";
 import { boot } from "@/data/content";
 import { cn } from "@/lib/utils";
@@ -17,10 +16,12 @@ interface TerminalProps {
   focusInput: boolean;
   onCommand: (command: string) => void;
   onStart: () => void;
+  /** "Skip to projects": closes the terminal and jumps to the first projects chapter. */
+  onSkip: () => void;
 }
 
 /** The boot terminal UI: typed lines, blinking caret, a live prompt and the two exits. */
-export function Terminal({ lines, history, ready, focusInput, onCommand, onStart }: TerminalProps) {
+export function Terminal({ lines, history, ready, focusInput, onCommand, onStart, onSkip }: TerminalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const startRef = useRef<HTMLButtonElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -107,13 +108,14 @@ export function Terminal({ lines, history, ready, focusInput, onCommand, onStart
           {boot.startLabel}
           <ArrowDownIcon aria-hidden="true" className="size-[18px]" />
         </button>
-        <Link
-          href="/classic"
+        <button
+          type="button"
+          onClick={onSkip}
           className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-strong px-5 text-[0.9375rem] font-semibold text-heading transition-colors hover:border-accent/70"
         >
           {boot.skipLabel}
           <ArrowRightIcon aria-hidden="true" className="size-[18px]" />
-        </Link>
+        </button>
       </div>
     </div>
   );

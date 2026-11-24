@@ -1,5 +1,6 @@
 import { ArrowUpRightIcon } from "lucide-react";
 import Link from "next/link";
+import { BulletList } from "@/components/ui/BulletList";
 import { ProjectCardFrame } from "@/components/ui/ProjectCardFrame";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TechChips } from "@/components/ui/TechChips";
@@ -46,6 +47,7 @@ export function ProjectCard({ project, className, variant, compact }: ProjectCar
           <p className="mt-4">
             <Txt>{project.tagline}</Txt>
           </p>
+          {project.highlights && <BulletList items={project.highlights} className="mt-4 space-y-1.5 text-[0.9375rem]" />}
           <TechChips items={project.tech} max={4} className="mt-6" />
         </>
       )}

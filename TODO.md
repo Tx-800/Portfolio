@@ -15,7 +15,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` partial
 - [x] Design tokens in `globals.css` (`@theme`), fonts (Space Grotesk, Inter, JetBrains Mono)
 - [x] `src/lib/site.ts` (`SITE_URL`, single place for the domain), `src/lib/utils.ts`
 - [x] `src/data/content.ts`: profile, chapters, 9 projects + case studies, metrics, skills, experience, contact
-- [x] UI: Header, Footer, Container, ChapterLabel, Button, StatusBadge, ProjectCard, MetricCounter, Timeline, Txt (placeholder highlighter), brand icons
+- [x] UI: Header, Footer, Container, ChapterLabel, Button, StatusBadge, ProjectCard, MetricCounter, Timeline, Txt (placeholder highlighter), brand icons (Timeline later replaced by ExperienceList, 2026-11-24)
 - [x] `/classic`: complete, polished
 - [x] Base metadata, `not-found.tsx` placeholder, temporary `/`
 ### (a+) Solar Plasma design system
@@ -82,7 +82,29 @@ Legend: `[ ]` todo · `[x]` done · `[~]` partial
 - [x] Packet flies between anchors (route position from scroll, damped), lives inside each station; flights use a right-hand lane clear of the captions
 - [x] Toys: Spark drag (spring), Websites swipe strip (scroll-snap), Pipeline "Refresh" burst
 - [x] `npm run shots -- --flow`: anchors + mid-flight at 390×844 / 360×800 with drift, coverage, rest-point and covered-text checks (all pass)
-- [ ] Owner: review on a real phone → then convert the remaining 6 chapters, replace the stage layout on mobile, decide on desktop
+- [x] Superseded by v3 (2026-11-23)
+
+## Mobile redesign v3: full-screen cinematic scenes (replaces v2)
+- [x] Oryzo reference frames studied (docs/reference/sheet_01–05). v2 flow code removed; `/flow` now hosts the v3 prototype (noindex, not linked)
+- [x] Architecture: tall track + one sticky full-screen stage (back type · canvas · front text · UI). One GSAP ScrollTrigger (scrub 0.6) → t in screens; one ticker callback applies HTML beats and renders the 3D (R3F frameloop="never" + advance)
+- [x] Fixed UI: wordmark, Menu pill (native <dialog> chapter list), progress bar + counter, "Scroll to continue". Site header hidden in stage mode on this route
+- [x] Scene 1 Spark (huge headline behind the packet, dive into its surface, plasma flash) · Scene 2 Websites (viewfinder frame, wipe swaps OVI → Masstech → Elitenex, persistent glass card) · Scene 3 Cockpit (pull-back: window becomes a cockpit screen, packet drops onto the desk, screens light up; Built / In progress beats)
+- [x] Reduced motion / no WebGL / desktop width: same DOM as stacked sections
+- [x] `npm run shots -- --flow`: 12 beats + mid-transitions at 390×844 / 360×800, text overlap + off-screen checks (all pass); desktop unchanged
+- [x] Superseded by v4 (2026-11-24)
+
+## Mobile redesign v4: "The Data Core" (replaces v1–v3 on mobile; desktop untouched)
+- [x] Prototype at `/flow`, chapters 1–3 (Spark → Websites → LocalPilot). v3 scene code removed
+- [x] The Core: 10k instanced particles, Solar Plasma gradient, glow sprites, breathing; morphs orb → browser → screen grid in the vertex shader (staggered, burst + swirl in between), scrubbed by scroll; drag sideways to turn it (spring back)
+- [x] Fly-through: camera moves forward (distance s from scroll, holds + eased travels); shader-wrapped light streaks (stretch with speed) and faint ribs; a ring gate per chapter, Core morphs as you pass
+- [x] Content at depth: HTML beats use CSS perspective = the camera's focal length, so they approach, settle (hold) and pass exactly like 3D objects; text only above/below the Core, satellites (tappable facts) in its corners
+- [x] Fixed UI: wordmark, Menu (chapter list), progress + counter, "Scroll to continue"; reduced motion / no WebGL / desktop width → stacked page
+- [x] `npm run shots -- --flow`: 13 moments × 390×844 / 360×800 with Core-centred, Core-covered, safe-area and overlap checks (all pass); desktop unchanged
+- [x] Chapters 1–3 reviewed by the owner (2026-11-24): "good looking, continue"
+- [x] Chapters 4–9: crystal cube (refresh layer sweeps up) · scanning ring (a table turns cold blue, alert envelope shoots out) · agent network (two clusters, tap to focus) · bar collapsing ~2 days → 3–5 min · spinning skill globe (skill groups as satellites) · envelope closing with the core as seal, circular "Let's build something" text, contact pills
+- [x] Morph now uploads only the current pair of shapes (9 shapes, CPU swap per chapter); per-chapter accent for gates and streaks
+- [x] `npm run shots -- --flow`: 40 moments × 390×844 / 360×800, all checks pass; desktop unchanged
+- [ ] Owner: review chapters 4–9 on a real phone → then replace the mobile layout on `/` (and retire the pinned-stage code)
 
 ## Phase 7: SEO, audits, deploy
 - [ ] Per-page metadata, OG images (site + per case study), sitemap, robots, JSON-LD Person
@@ -154,6 +176,24 @@ Legend: `[ ]` todo · `[x]` done · `[~]` partial
 | 2026-11-23 | Classic View blocks live in `src/components/classic/` | Keeps `sections/` strictly one-per-chapter |
 | 2026-11-23 | Kept the create-next-app 16.4 defaults: `cacheComponents`, `partialPrefetching`, `@tailwindcss/turbopack` | Current recommended setup; all pages are static content anyway |
 | 2026-11-23 | GitHub/LinkedIn icons are inline SVGs (lucide's earlier ISC outlines) | lucide-react 1.x removed brand icons; Simple Icons no longer has LinkedIn |
+| 2026-11-23 | Mobile v3 replaces v2: sticky full-screen stage, everything driven by one scroll value t (screens); timings live in `components/cinema/timeline.ts` | Text and 3D read the same t in the same callback, so they can't drift; one file to retime the story |
+| 2026-11-23 | Track/section heights in svh, canvas 100lvh + camera `setViewOffset` to centre on the visible part | svh is stable while the URL bar moves (dvh would change the page length mid-scroll); lvh canvas never resizes |
+| 2026-11-23 | Cockpit card shows the tagline, not the summary; Built list sets the card height | Keeps the desk and landed packet visible above the card |
+| 2026-11-24 | Mobile v4 "Data Core" replaces v3: one particle Core always centred, morphs per chapter; viewer flies forward (t → distance s with hold zones) | Owner's brief; holds keep text still and readable, travels give the fly-through |
+| 2026-11-24 | Overlay depth via `perspective(focal px) translateZ(P·r·WORLD_PER_LEG/coreDist)` per beat | Same projection as the 3D camera, so HTML and WebGL move as one space; driven in the same ticker callback |
+| 2026-11-24 | Satellites sit in the Core's corners (inner edge at 0.62 r, ±0.95 r vertically), not on an orbit beside it | A 55%-wide Core leaves no room beside it on 360–390px screens; corners are empty |
+| 2026-11-24 | Built/In progress placed above/below the Core (not left/right) | Not enough width beside the Core on phones for readable lists |
+| 2026-11-24 | Website screenshot shows inside the browser-shaped Core only when the file exists; otherwise particle content bars | No 404s; screenshots still to be added |
+| 2026-11-24 | Data Core morph: GPU gets only aFrom/aTo (+ meta); CPU copies the pair when the chapter changes | 9 shapes × 10k particles would need 9 position attributes; two keep the shader simple and the attribute count low |
+| 2026-11-24 | Agents: cluster tap targets sit in the Core's top corners (QAgent left, Compliance right; was Onboarding until the content update) | Same positions as the clusters in the network; 44px targets that never cover the Core |
+| 2026-11-24 | Short mobile copy added in `coreText` (e.g. "Data that refreshes itself", "Let's build something" from the owner's brief; "Courses" satellite for Elitenex) | ≤ ~25 words per beat; facts unchanged |
+| 2026-11-24 | Content update: no résumé anywhere; boot "Skip to projects" jumps to Where Data Is Born | Owner's request |
+| 2026-11-24 | Headline "I build full-stack websites, automations and AI agents." + new intro / summary / OG text | Full-stack website work was missing from the intro |
+| 2026-11-24 | "Practice project" → "Portfolio project" (status `portfolio`); LocalPilot keeps "In development", context "Portfolio project" | Owner's wording |
+| 2026-11-24 | Onboarding Agent removed everywhere (project, /work page, image folder, metrics, 3D); QAgent added (left cluster, first beat) | Owner's request. QAgent sits where Onboarding was so the 3D layout stays |
+| 2026-11-24 | Impact = before → after statements, no numbers. Mobile: "MANY PEOPLE" struck outline → "ONE EMAIL"; Core shape 6 is now "many → one" (ring of people collapses into one envelope) | No invented numbers after the onboarding metric was removed |
+| 2026-11-24 | Experience: no dates, no timeline (ExperienceList); each item has a `short` line for the mobile beat; Data Core gets a third Builder beat (portfolio projects) | Owner's request: explain the work instead |
+| 2026-11-24 | Cards show `highlights` (3–4 feature lines) for websites and agents | Masstech / Elitenex read as one-liners before |
 | 2026-11-23 | React pinned with `~19.3.1` in package.json | Stops `npm update` from pulling 19.4, which R3F 9 doesn't support |
 
 ## Backlog

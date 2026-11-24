@@ -6,8 +6,6 @@ import { metrics, profile } from "@/data/content";
 
 /** "Facts in 10 seconds": who, what, now, results, stack — all above the fold on desktop. */
 export function ClassicHero() {
-  const headlineResults = metrics.filter((m) => m.before).slice(0, 2);
-
   const facts: { term: string; detail: React.ReactNode }[] = [
     { term: "Now", detail: <Txt>{profile.currently}</Txt> },
     { term: "Focus", detail: profile.focus },
@@ -15,11 +13,16 @@ export function ClassicHero() {
       term: "Results",
       detail: (
         <ul className="space-y-1">
-          {headlineResults.map((m) => (
+          {metrics.map((m) => (
             <li key={m.id}>
-              {m.label}: <span className="text-muted line-through decoration-muted/60">{m.before}</span>{" "}
-              <span aria-hidden="true">→</span>
-              <span className="sr-only">now</span> <span className="font-mono text-gold">{m.after}</span>
+              {m.label}:{" "}
+              {m.before && (
+                <>
+                  <span className="text-muted line-through decoration-muted/60">{m.before}</span> <span aria-hidden="true">→</span>
+                  <span className="sr-only">now</span>{" "}
+                </>
+              )}
+              <span className="font-mono text-gold">{m.after}</span>
             </li>
           ))}
         </ul>

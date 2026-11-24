@@ -22,16 +22,15 @@ interface Bar {
 }
 
 /**
- * Abstract bars only: the real numbers live in the HTML metric tiles. Each group shows the
- * shape of a result:
- *  - onboarding / compliance: a tall muted "before" bar next to a tiny glowing "after" bar
+ * Abstract bars only: the statements live in the HTML tiles. Each group shows the shape of a result:
+ *  - compliance: many muted bars (many people + a developer) next to one small glowing bar (one email)
+ *  - QAgent: four equal bars, every test report answered the same way, automatically
  *  - freshness: seven equal bars, a steady daily rhythm
  */
 const BARS: Bar[] = [
-  { x: -2.15, height: 2.2, width: 0.42, tone: "muted" },
-  { x: -1.6, height: 0.22, width: 0.42, tone: "gold" },
-  { x: -0.3, height: 1.5, width: 0.42, tone: "muted" },
-  { x: 0.25, height: 0.22, width: 0.42, tone: "accent" },
+  ...[1.5, 1.9, 1.3, 1.7, 2.2].map((height, i) => ({ x: -2.5 + i * 0.2, height, width: 0.12, tone: "muted" as Tone })),
+  { x: -1.35, height: 0.4, width: 0.42, tone: "gold" },
+  ...Array.from({ length: 4 }, (_, i) => ({ x: -0.45 + i * 0.3, height: 1.1, width: 0.2, tone: "accent" as Tone })),
   ...Array.from({ length: 7 }, (_, i) => ({ x: 1.25 + i * 0.22, height: 0.9, width: 0.13, tone: "accent-2" as Tone })),
 ];
 /** Seconds between bars starting to grow, and the time for each to grow. */

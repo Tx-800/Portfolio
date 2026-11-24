@@ -221,6 +221,7 @@ export function BootOverlay() {
               focusInput={fine}
               onCommand={runCommand}
               onStart={() => leave("spark")}
+              onSkip={() => leave("websites")}
             />
           </motion.div>
         </motion.div>

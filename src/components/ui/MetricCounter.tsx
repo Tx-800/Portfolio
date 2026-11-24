@@ -13,8 +13,8 @@ interface MetricCounterProps {
 
 /** Translucent before → after tile with a big gold mono value that counts up into view. */
 export function MetricCounter({ label, before, after, note, className }: MetricCounterProps) {
-  // Long text values (e.g. "Added by email") use a smaller size so they don't overflow.
-  const isShort = after.length <= 9;
+  // Only short numeric values (e.g. "3–5 min") get the big size; words ("One email") would wrap.
+  const isShort = after.length <= 9 && /\d/.test(after);
 
   return (
     <div className={cn("panel flex h-full flex-col p-6 sm:p-7", className)}>
