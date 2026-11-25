@@ -13,6 +13,7 @@ import { WebsitesSection } from "@/components/sections/WebsitesSection";
 import { BootOverlay } from "@/components/ui/BootOverlay";
 import { ChapterNav } from "@/components/ui/ChapterNav";
 import { DebugLoader } from "@/components/ui/DebugLoader";
+import { DeviceSwitch } from "@/components/ui/DeviceSwitch";
 import { JourneyCanvas } from "@/components/ui/JourneyCanvas";
 import { ScrollEngine } from "@/components/ui/ScrollEngine";
 import { ScrollReveals } from "@/components/ui/ScrollReveals";
@@ -47,6 +48,8 @@ export default function JourneyPage() {
 
   return (
     <>
+      {/* Phones get /m instead (proxy.ts); this corrects a wrong server guess in the browser. */}
+      <DeviceSwitch rendered="desktop" />
       <JourneyCanvas screenshots={screenshots} />
       <ScrollEngine />
       {/* BootOverlay before ScrollReveals: reveals wait for the terminal to hand off. */}

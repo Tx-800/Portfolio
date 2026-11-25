@@ -22,7 +22,7 @@ export function CockpitChapter() {
   const localpilot = getProject("localpilot");
   if (!localpilot) return null;
   return (
-    <section aria-labelledby="core-cockpit" className={sceneClass}>
+    <section id="cockpit" aria-labelledby="core-cockpit" className={sceneClass}>
       <SplitHeading as="h2" id="core-cockpit" lines={coreText.cockpitHeading} />
       <Beat id="cockpit.intro">
         <TopZone>

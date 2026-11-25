@@ -7,18 +7,17 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { createPortal } from "react-dom";
 import { Terminal } from "@/components/ui/Terminal";
 import { boot, type ChapterId } from "@/data/content";
+import { screenDevice } from "@/lib/device";
 import { scrollToElement } from "@/lib/scrollTo";
 import { uiStore } from "@/store/ui";
 
-type Mode = "full" | "short" | "none";
+type Mode = "full" | "instant" | "none";
 
 const SESSION_KEY = "yg-boot-seen";
 /** Typing speed: characters per tick, ms per tick, pause between lines. */
 const CHARS_PER_TICK = 2;
 const TICK_MS = 16;
 const LINE_PAUSE_MS = 160;
-/** Repeat visits: the terminal shows complete and hands off on its own after this delay. */
-const SHORT_AUTOSTART_MS = 1100;
 /** How long the overlay takes to dissolve; the camera flight starts part-way through. */
 const EXIT_S = 0.9;
 const FLIGHT_DELAY_MS = 250;
@@ -35,13 +34,16 @@ let decided: Mode | undefined;
 /**
  * Show the boot terminal? Decided once per page load on the client:
  *  - none: reduced motion, a deep link (#chapter), or already scrolled down
- *  - short: seen earlier this session → complete terminal, auto hand-off after ~1 s
+ *  - instant: seen earlier this session → the lines appear complete (no typing)
+ * It never closes on its own: only Start / Skip, Enter on an empty prompt, Esc or a command
+ * that navigates hands off to the page.
  *  - full: first visit → typed out
  */
 function decide(): Mode {
   if (decided) return decided;
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduce || window.location.hash || window.scrollY > 40) return (decided = "none");
+  // (also none on a phone-class screen: DeviceSwitch swaps in the mobile page right away)
+  if (reduce || window.location.hash || window.scrollY > 40 || screenDevice() === "mobile") return (decided = "none");
   let seen = false;
   try {
     seen = sessionStorage.getItem(SESSION_KEY) === "1";
@@ -49,7 +51,7 @@ function decide(): Mode {
   } catch {
     // Storage blocked: treat as a first visit.
   }
-  return (decided = seen ? "short" : "full");
+  return (decided = seen ? "instant" : "full");
 }
 
 /** Will the boot terminal cover the page on this load? (Scroll reveals wait for it.) */
@@ -74,7 +76,7 @@ export function BootOverlay() {
   const router = useRouter();
   const leaving = useRef(false);
   const visible = mode !== "none" && open;
-  const ready = mode === "short" || progress.done;
+  const ready = mode === "instant" || progress.done;
 
   // Typewriter: a few characters every frame, a short pause between lines.
   useEffect(() => {
@@ -134,20 +136,6 @@ export function BootOverlay() {
     [lenis],
   );
 
-  // Repeat visits hand off automatically, unless the visitor starts typing.
-  useEffect(() => {
-    if (mode !== "short") return;
-    const id = setTimeout(() => leave("spark"), SHORT_AUTOSTART_MS);
-    const cancel = () => clearTimeout(id);
-    window.addEventListener("keydown", cancel, { once: true });
-    window.addEventListener("pointerdown", cancel, { once: true });
-    return () => {
-      cancel();
-      window.removeEventListener("keydown", cancel);
-      window.removeEventListener("pointerdown", cancel);
-    };
-  }, [mode, leave]);
-
   // Esc = start the journey.
   useEffect(() => {
     if (!visible) return;
@@ -161,7 +149,16 @@ export function BootOverlay() {
     const echo = `> ${raw.trim()}`;
     if (!command) return leave("spark");
     if (command === "help") {
-      setHistory((h) => [...h, echo, ...boot.commands.map((c) => `${c.name.padEnd(10)} ${c.description}`)]);
+      // Names padded to one width: the mono font lines the descriptions up in a column.
+      const width = Math.max(...boot.commands.map((c) => c.name.length)) + 2;
+      setHistory((h) => [
+        ...h,
+        echo,
+        boot.messages.helpTitle,
+        ...boot.commands.map((c) => `  ${c.name.padEnd(width)}${c.description}`),
+        "",
+        boot.messages.helpPrompt,
+      ]);
       return;
     }
     if (command === "sudo hire") {
@@ -185,7 +182,7 @@ export function BootOverlay() {
     setHistory((h) => [...h, echo, boot.messages.notFound.replace("{cmd}", raw.trim())]);
   }
 
-  // Lines typed so far (all of them in short mode).
+  // Lines typed so far (all of them in instant mode).
   const lines =
     mode === "full" && !progress.done
       ? [...boot.lines.slice(0, progress.line), boot.lines[progress.line].slice(0, progress.chars)]

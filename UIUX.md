@@ -99,6 +99,8 @@ Lighting (implemented in Phase 3):
 - Framing: `camera.setViewOffset` shifts each station beside its panel (desktop) or above it (mobile); values in `components/three/path.ts`.
 
 ## 8. Mobile: "pinned stage" scrollytelling
+> **Superseded (2026-11-25):** phones and tablets now get the Data Core (`/m`, served at "/" by `src/proxy.ts`). This section describes the old mobile layout, still in the desktop page's code until it is retired.
+
 Applies below 1024px **or** on touch devices, with motion allowed and WebGL available (Tailwind `stage:` variant = `STAGE_QUERY` in `lib/stageMode.ts`). Desktop is unchanged; reduced motion / no WebGL get the stacked, unpinned layout.
 
 - **Split screen:** the 3D stage is fixed in the top **55svh** (opaque, above the content: text never sits over the 3D); each chapter's card pins in the bottom **45svh** (sticky at `top: 55svh`). svh units keep the triggers stable when the mobile URL bar shows/hides.

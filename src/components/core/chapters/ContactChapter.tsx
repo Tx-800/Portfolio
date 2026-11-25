@@ -39,7 +39,7 @@ function RingText({ text }: { text: string }) {
 export function ContactChapter() {
   const chapter = getChapter("contact");
   return (
-    <section aria-labelledby="core-contact" className={sceneClass}>
+    <section id="contact" aria-labelledby="core-contact" className={sceneClass}>
       <Beat id="contact.build">
         <TopZone>
           <ChapterTag chapter={chapter} />

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils";
+import { screenDevice } from "@/lib/device";
 import { hasWebGL } from "@/lib/webgl";
 import { uiStore } from "@/store/ui";
 
@@ -25,6 +26,9 @@ export function JourneyCanvas({ screenshots }: { screenshots: Record<string, str
 
   useEffect(() => {
     if (reducedMotion) return;
+    // A phone-class screen got the desktop page by mistake: DeviceSwitch is about to swap in the
+    // Data Core, so never start downloading the desktop stations.
+    if (screenDevice() === "mobile") return;
     if (!hasWebGL()) {
       // Collapses the travel gaps (globals.css) so the page reads like the Classic View.
       document.documentElement.dataset.webgl = "off";

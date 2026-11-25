@@ -5,14 +5,17 @@
  *   npm run build && npm run shots
  *   npm run shots -- --only=watchtower,agents      only some chapters (plus "overlay", "pages")
  *   npm run shots -- --url=http://localhost:3000  use an already running server
- *   npm run shots -- --flow                       only the mobile Data Core prototype (/flow)
+ *   npm run shots -- --flow                       only the mobile Data Core (phones on "/")
+ *   npm run shots -- --phones=only                skip the desktop journey
  *
  * Captures:
  *   desktop-<chapter>.png              1440×900, each chapter + two travel moments
- *   m390-<chapter>-{start,mid,end}.png  mobile "pinned stage" at 390×844 and 360×800 (m360-…):
- *                                      each chapter at the start, middle and end of its pinned
- *                                      scene, with an automatic overlap check (stage vs. card)
- *   core-m390-<nn-moment>.png          /flow prototype: every hold, gate approach/pass, a site switch (--flow)
+ *   core-m390-<nn-moment>.png          phones (iPhone user agent) on "/" → the Data Core (rewritten to /m):
+ *                                      every hold, gate approach / pass / arrival, a site switch;
+ *                                      390×844 and 360×800 (core-m360-…)
+ *   routing-<case>.png                 device routing: which experience "/" ends up showing for
+ *                                      phones, desktops, iPads reporting as Mac, "Desktop site"
+ *                                      mode, a resized window; deep link + case study from the Data Core
  *   *-boot / *-overlay / *-page-* / reduced-*   boot terminal, case-study overlay, other pages,
  *                                      reduced motion
  *
@@ -37,6 +40,12 @@ const only = args.only ? args.only.split(",") : null;
 const chapters = only ? CHAPTERS.filter((c) => only.includes(c)) : CHAPTERS;
 const DESKTOP_TARGETS = only ? chapters : [...CHAPTERS, "transit:pipeline", "transit:agents"];
 const DESKTOP = { name: "desktop", width: 1440, height: 900, mobile: false };
+/** User agents for the device routing (proxy.ts). */
+const UA = {
+  iphone:
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+  mac: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+};
 const PHONES = [
   { name: "m390", width: 390, height: 844, mobile: true },
   { name: "m360", width: 360, height: 800, mobile: true },
@@ -48,13 +57,6 @@ const SETTLE_MS = 3500;
  * the top of the page needs much longer to settle than chapter-to-chapter moves.
  */
 const FIRST_SETTLE_MS = 10000;
-/** Scene positions captured on phones (scrub progress). */
-const SCENE_POINTS = [
-  ["start", 0.04],
-  ["mid", 0.5],
-  ["end", 0.96],
-];
-
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function findChrome() {
@@ -87,6 +89,7 @@ async function waitFor(url, ms = 30000) {
 
 async function openJourney(browser, base, vp, problems) {
   const page = await browser.newPage();
+  await page.setUserAgent(vp.mobile ? UA.iphone : UA.mac);
   await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: 1, isMobile: vp.mobile, hasTouch: vp.mobile });
   page.on("console", (m) => ["error", "warn"].includes(m.type()) && problems.push(`[${vp.name}] ${m.type()}: ${m.text()}`));
   page.on("pageerror", (e) => problems.push(`[${vp.name}] pageerror: ${e.message}`));
@@ -107,7 +110,27 @@ async function save(page, name) {
 async function passBoot(page, vp, problems) {
   const hasBoot = await page.evaluate(() => Boolean(document.querySelector('[aria-labelledby="boot-title"]')));
   if (hasBoot) {
-    if (!only) await save(page, `${vp.name}-boot`);
+    // The terminal never moves on by itself: after typing, `help` and an unknown command it
+    // must still be open, and again after a reload in the same session (lines shown instantly).
+    const isOpen = () => page.evaluate(() => Boolean(document.querySelector('[aria-labelledby="boot-title"]')));
+    const run = async (command) => {
+      await page.type("#boot-input", command);
+      await page.keyboard.press("Enter");
+      await wait(600);
+    };
+    if (!only) {
+      await save(page, `${vp.name}-boot`);
+      await run("help");
+      await save(page, `${vp.name}-boot-help`);
+      await run("make coffee");
+      await save(page, `${vp.name}-boot-unknown`);
+      await wait(5000);
+      if (!(await isOpen())) problems.push(`[${vp.name}] boot terminal closed by itself after typing`);
+      await page.reload({ waitUntil: "load" });
+      await wait(6000);
+      if (!(await isOpen())) problems.push(`[${vp.name}] boot terminal closed by itself on a repeat visit`);
+      await save(page, `${vp.name}-boot-repeat`);
+    }
     await page.keyboard.press("Escape");
     await wait(3000);
   } else if (!only) {
@@ -138,94 +161,6 @@ async function desktopPass(browser, base, problems) {
   await page.close();
 }
 
-/**
- * Phones: the pinned-stage journey. For each chapter, scroll to the start / middle / end of its
- * pinned scene (measured exactly like the scroll engine does) and check the layout: the card
- * must sit entirely below the stage and inside the viewport.
- */
-async function phonePass(browser, base, vp, problems) {
-  const page = await openJourney(browser, base, vp, problems);
-  await passBoot(page, vp, problems);
-  const stageOn = await page.evaluate(() => {
-    const stage = document.getElementById("stage");
-    return Boolean(stage && getComputedStyle(stage).zIndex === "20");
-  });
-  if (!stageOn) problems.push(`[${vp.name}] stage mode is not active`);
-
-  let first = true;
-  for (const chapter of chapters) {
-    for (const [label, p] of SCENE_POINTS) {
-      const target = await page.evaluate(
-        (id, p) => {
-          const scene = document.querySelector(`#${id} [data-scene]`);
-          const card = scene?.querySelector("[data-scene-card]");
-          if (!scene || !card) return null;
-          const top = scene.getBoundingClientRect().top + window.scrollY;
-          const cardTop = parseFloat(getComputedStyle(card).top) || 0;
-          const distance = scene.offsetHeight - card.offsetHeight;
-          return top - cardTop + distance * p;
-        },
-        chapter,
-        p,
-      );
-      if (target === null) {
-        problems.push(`[${vp.name}] ${chapter}: no pinned scene found`);
-        break;
-      }
-      await page.evaluate((y) => window.scrollTo(0, y), target);
-      await wait(first ? FIRST_SETTLE_MS : label === "start" ? SETTLE_MS : 2200);
-      first = false;
-
-      const layout = await page.evaluate((id) => {
-        const stage = document.getElementById("stage").getBoundingClientRect();
-        const cardEl = document.querySelector(`#${id} [data-scene-card]`);
-        const card = cardEl.getBoundingClientRect();
-        // Content taller than the card would spill over the stage or under the chapter bar.
-        const style = getComputedStyle(cardEl);
-        const inner = cardEl.scrollHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-        const room = cardEl.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-        const content = [...cardEl.children].reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
-        return { stageBottom: stage.bottom, cardTop: card.top, cardBottom: card.bottom, vh: window.innerHeight, overflow: Math.max(inner, content) - room };
-      }, chapter);
-      if (layout.cardTop < layout.stageBottom - 1) {
-        problems.push(`[${vp.name}] ${chapter} ${label}: card (top ${layout.cardTop.toFixed(0)}) overlaps the stage (bottom ${layout.stageBottom.toFixed(0)})`);
-      }
-      if (layout.overflow > 24) {
-        problems.push(`[${vp.name}] ${chapter} ${label}: card content is ${layout.overflow.toFixed(0)}px taller than the space between the stage and the chapter bar`);
-      }
-      if (layout.cardBottom > layout.vh + 1) {
-        problems.push(`[${vp.name}] ${chapter} ${label}: card overflows the viewport (${layout.cardBottom.toFixed(0)} > ${layout.vh})`);
-      }
-      await save(page, `${vp.name}-${chapter}-${label}`);
-    }
-  }
-  // A travel moment and the long-content state (stage slid away).
-  if (!only) {
-    for (const [name, id] of [["transit-pipeline", "pipeline"], ["builder-content", "builder"]]) {
-      await page.evaluate(
-        (name, id) => {
-          const section = document.getElementById(id);
-          if (name.startsWith("transit")) {
-            const gap = section.nextElementSibling;
-            const r = gap.getBoundingClientRect();
-            window.scrollTo(0, r.top + window.scrollY + r.height / 2 - window.innerHeight * 0.55);
-          } else {
-            const scene = section.querySelector("[data-scene]");
-            const r = scene.getBoundingClientRect();
-            window.scrollTo(0, r.top + window.scrollY + r.height + window.innerHeight * 0.6);
-          }
-        },
-        name,
-        id,
-      );
-      await wait(SETTLE_MS);
-      await save(page, `${vp.name}-${name}`);
-    }
-  }
-  if (vp.name === "m390" && (!only || only.includes("overlay"))) await overlayCheck(page, vp, problems);
-  await page.close();
-}
-
 /** Case-study overlay: open the first visible website card (intercepted route), capture, close. */
 async function overlayCheck(page, vp, problems) {
   await page.evaluate(() => {
@@ -247,9 +182,8 @@ async function overlayCheck(page, vp, problems) {
   await save(page, `${vp.name}-overlay-closed`);
 }
 
-/** Flow prototype anchors (page order) and where the packet should rest in each. */
 /**
- * Mobile "Data Core" prototype (/flow). Captures every hold (mid-hold), the approach to each
+ * Mobile "Data Core", as a phone gets it: "/" with an iPhone user agent (rewritten to /m). Captures every hold (mid-hold), the approach to each
  * gate, the moment of passing through it (mid-morph) and one travel between two sites.
  * Stop times come from the page itself (window.__core). Checks at every hold:
  *   - the Core is centred (≤ 3px off the visible screen's centre),
@@ -259,12 +193,15 @@ async function overlayCheck(page, vp, problems) {
  */
 async function corePass(browser, base, vp, problems) {
   const page = await browser.newPage();
+  await page.setUserAgent(UA.iphone);
   await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: 1, isMobile: vp.mobile, hasTouch: vp.mobile });
   page.on("console", (m) => ["error", "warn"].includes(m.type()) && problems.push(`[core ${vp.name}] ${m.type()}: ${m.text()}`));
   page.on("pageerror", (e) => problems.push(`[core ${vp.name}] pageerror: ${e.message}`));
   page.on("response", (r) => r.status() >= 400 && problems.push(`[core ${vp.name}] HTTP ${r.status()}: ${r.url()}`));
-  await page.goto(`${base}/flow`, { waitUntil: "load" });
+  await page.goto(base, { waitUntil: "load" });
   await wait(6000);
+  const where = await experienceOf(page);
+  if (where.path !== "/" || !where.core) problems.push(`[core ${vp.name}] "/" did not show the Data Core (path ${where.path})`);
   const plan = await page.evaluate(() => window.__core && { holds: window.__core.holds, gates: window.__core.gates, half: window.__core.morphHalf });
   if (!plan || !(await page.evaluate(() => Boolean(document.querySelector("canvas"))))) {
     problems.push(`[core ${vp.name}] engine or canvas not running`);
@@ -342,6 +279,7 @@ async function pagesPass(browser, base, problems) {
   ];
   for (const vp of [DESKTOP, PHONES[0]]) {
     const page = await browser.newPage();
+    await page.setUserAgent(vp.mobile ? UA.iphone : UA.mac);
     await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: 1, isMobile: vp.mobile, hasTouch: vp.mobile });
     page.on("pageerror", (e) => problems.push(`[${vp.name} pages] pageerror: ${e.message}`));
     page.on("response", (r) => {
@@ -371,6 +309,7 @@ async function pagesPass(browser, base, problems) {
 async function reducedPass(browser, base, problems) {
   for (const vp of [DESKTOP, PHONES[0]]) {
     const page = await browser.newPage();
+    await page.setUserAgent(vp.mobile ? UA.iphone : UA.mac);
     await page.setViewport({ width: vp.width, height: vp.height, deviceScaleFactor: 1, isMobile: vp.mobile, hasTouch: vp.mobile });
     await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
     page.on("pageerror", (e) => problems.push(`[reduced ${vp.name}] pageerror: ${e.message}`));
@@ -390,6 +329,106 @@ async function reducedPass(browser, base, problems) {
     await page.screenshot({ path: `${OUT}/reduced-${vp.name}-impact.png` });
     console.log("saved", `${OUT}/reduced-${vp.name}-*.png`);
     await page.close();
+  }
+}
+
+/** What "/" ended up showing in this page. */
+function experienceOf(page) {
+  return page.evaluate(() => ({
+    path: window.location.pathname,
+    hash: window.location.hash,
+    core: Boolean(document.querySelector("[data-core]")),
+    journey: Boolean(document.getElementById("stage")),
+    coreCanvas: Boolean(document.querySelector("[data-core-stage] canvas")),
+    journeyCanvas: Boolean(document.querySelector("#stage canvas")),
+  }));
+}
+
+/** Is this the expected experience, with only its own 3D loaded? */
+function checkExperience(tag, got, want, problems) {
+  if (got.path !== "/") problems.push(`[routing ${tag}] URL is ${got.path}, expected "/"`);
+  const ok =
+    want === "mobile"
+      ? got.core && !got.journey && got.coreCanvas && !got.journeyCanvas
+      : got.journey && !got.core && got.journeyCanvas && !got.coreCanvas;
+  if (!ok) problems.push(`[routing ${tag}] expected the ${want} experience, got ${JSON.stringify(got)}`);
+}
+
+/**
+ * Device routing (proxy.ts + DeviceSwitch). Each case runs in a fresh browser context (no
+ * device cookie): the server guesses from the user agent, the browser corrects it, and "/"
+ * must end up showing the right experience, URL unchanged, one 3D world only.
+ */
+async function routingPass(browser, base, problems) {
+  const cases = [
+    { name: "desktop", ua: UA.mac, w: 1440, h: 900, touch: false, want: "desktop" },
+    { name: "phone", ua: UA.iphone, w: 390, h: 844, touch: true, want: "mobile" },
+    { name: "ipad-reports-mac", ua: UA.mac, w: 1366, h: 1024, touch: true, want: "mobile" },
+    { name: "phone-desktop-site", ua: UA.mac, w: 980, h: 1900, touch: true, want: "mobile" },
+    { name: "phone-ua-big-screen", ua: UA.iphone, w: 1440, h: 900, touch: false, want: "desktop" },
+    { name: "resized-window", ua: UA.mac, w: 1440, h: 900, touch: false, want: "mobile", resize: { w: 800, h: 900 } },
+  ];
+  const open = async (c) => {
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
+    await page.setUserAgent(c.ua);
+    await page.setViewport({ width: c.w, height: c.h, deviceScaleFactor: 1, isMobile: c.touch, hasTouch: c.touch });
+    page.on("pageerror", (e) => problems.push(`[routing ${c.name}] pageerror: ${e.message}`));
+    page.on("response", (r) => r.status() >= 400 && problems.push(`[routing ${c.name}] HTTP ${r.status()}: ${r.url()}`));
+    return { context, page };
+  };
+
+  for (const c of cases) {
+    const { context, page } = await open(c);
+    await page.goto(base, { waitUntil: "load" });
+    await wait(7000);
+    if (c.resize) {
+      await page.setViewport({ width: c.resize.w, height: c.resize.h, deviceScaleFactor: 1 });
+      await wait(7000);
+    }
+    checkExperience(c.name, await experienceOf(page), c.want, problems);
+    await save(page, `routing-${c.name}`);
+    await context.close();
+  }
+
+  // Phone: client-side navigation back to "/#cockpit" from a case study page (RSC request
+  // through the proxy) lands in the Data Core at the start of that chapter.
+  {
+    const c = { name: "phone-deep-link", ua: UA.iphone, w: 390, h: 844, touch: true };
+    const { context, page } = await open(c);
+    await page.goto(`${base}/work/localpilot`, { waitUntil: "load" });
+    await wait(2500);
+    await page.click('a[href="/#cockpit"]');
+    await wait(7000);
+    const got = await experienceOf(page);
+    checkExperience(c.name, got, "mobile", problems);
+    if (got.hash !== "#cockpit") problems.push(`[routing ${c.name}] hash is "${got.hash}"`);
+    const off = await page.evaluate(() => Math.abs(window.__core.t() - window.__core.holds.find((h) => h.id === "cockpit.intro").t));
+    if (off > 0.3) problems.push(`[routing ${c.name}] landed ${off.toFixed(2)} screens away from the cockpit chapter`);
+    await save(page, `routing-${c.name}`);
+
+    // Case study from a Data Core pill: opens as the overlay, Esc returns to "/".
+    await page.evaluate(() => {
+      const hold = window.__core.holds.find((h) => h.id === "websites.0");
+      window.scrollTo(0, window.__core.scrollFor(hold.t));
+    });
+    await wait(3000);
+    const href = await page.evaluate(() => {
+      const link = [...document.querySelectorAll('[data-beat] a[href^="/work/"]')].find(
+        (a) => getComputedStyle(a.closest("[data-beat]")).visibility === "visible",
+      );
+      link?.click();
+      return link?.getAttribute("href");
+    });
+    await wait(2500);
+    const dialog = await page.evaluate(() => Boolean(document.querySelector('[role="dialog"][aria-labelledby="case-title"]')));
+    if (!href || !dialog) problems.push(`[routing phone-overlay] case study did not open as an overlay (${href})`);
+    await save(page, "routing-phone-overlay");
+    await page.keyboard.press("Escape");
+    await wait(2500);
+    const after = await experienceOf(page);
+    if (after.path !== "/" || !after.core) problems.push(`[routing phone-overlay] after closing: ${JSON.stringify(after)}`);
+    await context.close();
   }
 }
 
@@ -417,11 +456,12 @@ async function main() {
 
   try {
     if (args.flow) {
-      // `npm run shots -- --flow`: only the mobile Data Core prototype.
+      // `npm run shots -- --flow`: only the mobile Data Core.
       for (const vp of PHONES) await corePass(browser, base, vp, problems);
     } else {
       if (args.phones !== "only") await desktopPass(browser, base, problems);
-      for (const vp of PHONES) await phonePass(browser, base, vp, problems);
+      if (!only || only.includes("routing")) await routingPass(browser, base, problems);
+      if (!only) for (const vp of PHONES) await corePass(browser, base, vp, problems);
       if (!only || only.includes("pages")) await pagesPass(browser, base, problems);
       if (!only) await reducedPass(browser, base, problems);
     }

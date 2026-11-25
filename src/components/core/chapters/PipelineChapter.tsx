@@ -11,7 +11,7 @@ export function PipelineChapter() {
   const project = getProject("snowflake-data-platform");
   if (!project) return null;
   return (
-    <section aria-labelledby="core-pipeline" className={sceneClass}>
+    <section id="pipeline" aria-labelledby="core-pipeline" className={sceneClass}>
       <SplitHeading as="h2" id="core-pipeline" lines={coreText.pipelineHeading} />
       <Beat id="pipeline.intro">
         <TopZone>

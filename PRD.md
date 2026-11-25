@@ -61,6 +61,7 @@ Case study structure: Overview · The problem · What I built · Key features ·
 | 9 | Your Turn | Packet flies into an inbox | Email, GitHub, LinkedIn |
 
 ## 7. Functional requirements
+- **Device routing:** "/" serves the desktop journey or, for phones and tablets, the mobile Data Core (internal route `/m`, same URL; see `src/proxy.ts`).
 - **Journey (`/`)**: tall scroll page, one HTML section per chapter. Fixed canvas behind it. Hold zones keep the camera still while a panel is readable. Progress rail (desktop, chapters 1–9, click to jump). Bottom bar on mobile (current chapter + menu).
 - **Case study**: clicking a card opens `/work/[slug]` as an intercepted-route overlay with a shared-layout expand (full-screen sheet on mobile). The journey stays mounted underneath, so closing it (button or Esc) returns to the same spot. A direct visit renders the standalone page. Sticky mini table of contents on desktop.
 - **Classic View (`/classic`)**: fast, beautifully typeset single page with the same content and no WebGL. Header toggle "Classic view" / "Immersive view". With reduced motion or no WebGL, `/` renders the Classic layout in place, with a note.

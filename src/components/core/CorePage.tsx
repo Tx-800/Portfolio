@@ -11,10 +11,9 @@ import { CoreChrome } from "@/components/core/CoreChrome";
 import { CoreDrag } from "@/components/core/CoreDrag";
 import { CoreEngine } from "@/components/core/CoreEngine";
 import { TOTAL } from "@/components/core/timeline";
-import { coreText } from "@/data/content";
 
 /**
- * Mobile "Data Core" layout: all nine chapters (prototype at /flow).
+ * Mobile "Data Core" layout: all nine chapters. Served at "/" to phones and tablets (route /m, see proxy.ts).
  *
  * Stage mode (phones, motion allowed, WebGL): a tall track with one sticky full-screen stage.
  * The Core and the fly-through space are WebGL (z-10); every beat is an HTML layer over it
@@ -27,8 +26,6 @@ import { coreText } from "@/data/content";
 export function CorePage({ screenshots }: { screenshots: Record<string, string> }) {
   return (
     <div data-core className="font-display">
-      <p className="px-4 pt-6 label-mono text-muted stage:hidden">{coreText.prototypeNote}</p>
-
       <div data-core-track style={{ "--core-total": TOTAL } as React.CSSProperties} className="stage:h-[calc((var(--core-total)+1)*100svh)]">
         <div data-core-stage className="stage:sticky stage:top-0 stage:isolate stage:h-lvh stage:overflow-hidden">
           {/* Warm light from below, under everything. */}

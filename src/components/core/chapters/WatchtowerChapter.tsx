@@ -12,7 +12,7 @@ export function WatchtowerChapter() {
   const project = getProject("staleness-agent");
   if (!project) return null;
   return (
-    <section aria-labelledby="core-watchtower" className={sceneClass}>
+    <section id="watchtower" aria-labelledby="core-watchtower" className={sceneClass}>
       <h2 id="core-watchtower" className="sr-only">
         {watchtower.heading}
       </h2>

@@ -13,7 +13,7 @@ const SITE_STOPS: StopId[] = ["websites.0", "websites.1", "websites.2"];
 export function WebsitesChapter() {
   const websites = getChapter("websites");
   return (
-    <section aria-labelledby="core-websites" className={sceneClass}>
+    <section id="websites" aria-labelledby="core-websites" className={sceneClass}>
       <h2 id="core-websites" className="sr-only">
         {websites.heading}
       </h2>

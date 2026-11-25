@@ -18,7 +18,7 @@ export function BuilderChapter() {
   }));
 
   return (
-    <section aria-labelledby="core-builder" className={sceneClass}>
+    <section id="builder" aria-labelledby="core-builder" className={sceneClass}>
       <h2 id="core-builder" className="sr-only">
         {builder.heading}
       </h2>

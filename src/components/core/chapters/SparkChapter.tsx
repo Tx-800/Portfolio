@@ -12,7 +12,7 @@ export function SparkChapter() {
   const [headA, headB] = [profile.headline.slice(0, comma + 1), profile.headline.slice(comma + 2)];
 
   return (
-    <section aria-labelledby="core-name" className={sceneClass}>
+    <section id="spark" aria-labelledby="core-name" className={sceneClass}>
       <Beat id="spark.name">
         <TopZone>
           <ChapterTag chapter={spark} />

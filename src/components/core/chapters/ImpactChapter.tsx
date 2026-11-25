@@ -21,7 +21,7 @@ export function ImpactChapter() {
   ];
 
   return (
-    <section aria-labelledby="core-impact" className={sceneClass}>
+    <section id="impact" aria-labelledby="core-impact" className={sceneClass}>
       <h2 id="core-impact" className="sr-only">
         {impact.heading}
       </h2>

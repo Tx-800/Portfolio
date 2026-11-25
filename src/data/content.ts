@@ -273,23 +273,26 @@ export const railChapters = chapters.filter((chapter) => chapter.inRail);
 /* ------------------------------------------------------------------- boot */
 
 export const boot = {
-  lines: ["> initializing pipeline…", "> loading projects… ok", "> connecting to Yogesh Gangarde… ok"],
+  lines: ["> initializing pipeline…", "> loading projects… ok", "> connecting to Yogesh Gangarde… ok", "> system ready"],
   startLabel: "Start the journey",
   skipLabel: "Skip to projects",
+  /** Listed by `help`, in this order. */
   commands: [
-    { name: "help", description: "List available commands" },
-    { name: "about", description: "Jump to The Spark" },
-    { name: "projects", description: "Jump to the websites" },
-    { name: "agents", description: "Jump to The Agents" },
-    { name: "contact", description: "Jump to Your Turn" },
-    { name: "classic", description: "Open the Classic View" },
+    { name: "about", description: "Who I am" },
+    { name: "projects", description: "Jump to my projects" },
+    { name: "agents", description: "AI agents I built" },
+    { name: "contact", description: "Get in touch" },
+    { name: "classic", description: "Open the classic (no 3D) view" },
+    { name: "sudo hire", description: "You know what this does ;)" },
   ],
   /** Terminal replies. `{cmd}` is replaced with what the visitor typed. */
   messages: {
     title: "Boot terminal",
-    ready: "> ready. press enter or type `help`",
+    hint: "Type help to see available options, or press Start the journey.",
+    helpTitle: "Available options:",
+    helpPrompt: "Enter any option below:",
     inputLabel: "Terminal command",
-    notFound: "command not found: {cmd}. type `help`",
+    notFound: "command not found: {cmd} — type help to see available options",
     sudoHire: "[sudo] permission granted. routing you to contact…",
     navigating: "routing…",
   },
@@ -304,12 +307,11 @@ export interface Satellite {
 }
 
 /**
- * Mobile "Data Core" layout (prototype at /flow): fixed UI and the short texts
+ * Mobile "Data Core" layout (served at "/" to phones, route /m): fixed UI and the short texts
  * placed around the Core. Short versions of facts that exist in full in the projects above;
  * keep at most ~25 words on screen per beat.
  */
 export const coreText = {
-  prototypeNote: "Mobile prototype v4 · Data Core",
   menu: "Menu",
   closeMenu: "Close menu",
   menuTitle: "Chapters",

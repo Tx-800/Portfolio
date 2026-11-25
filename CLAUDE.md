@@ -3,6 +3,7 @@
 Portfolio of **Yogesh Gangarde**, a full-stack developer who builds web apps, data pipelines and AI agents.
 Concept: **"Follow the Data"**. One fixed 3D canvas, a camera path through 9 stations, and HTML chapter panels over it.
 Also `/classic` (no WebGL) and `/work/[slug]` (case studies).
+Phones and tablets get the mobile **Data Core** at the same URL: `src/proxy.ts` rewrites "/" to `/m` (user agent, or the `yg-device` cookie), and `DeviceSwitch` corrects wrong guesses in the browser (`lib/device.ts`).
 
 **Read before working:** `PRD.md` (scope, content rules) · `UIUX.md` (design system, motion, chapters) · `TODO.md` (current phase).
 `AGENTS.md` is managed by `next dev`. Leave it alone. It points to the bundled docs in `node_modules/next/dist/docs/`; check them before using any Next API. This Next version has `cacheComponents` and `partialPrefetching` on, and Tailwind runs through `@tailwindcss/turbopack` (no PostCSS config). Avoid `new Date()` / request APIs in server components unless they're wrapped as the docs describe.
@@ -30,8 +31,9 @@ npm run build   # production build + type check: must pass before a phase is don
 npm run lint
 npm run start   # serve the production build (use it for Lighthouse)
 npm run shots   # after `npm run build`: headless Chrome screenshots of every chapter (desktop + mobile) → .shots/
-                # `-- --only=agents,builder` for a subset, `-- --phones=only` to skip desktop. Phones (390×844, 360×800)
-                # capture every chapter at scene start/mid/end with an automatic stage/card overlap check.
+                # `-- --only=agents,builder` for a subset (plus "routing", "overlay", "pages"), `-- --phones=only` to skip
+                # desktop, `-- --flow` for the Data Core only. Phones (390×844, 360×800, iPhone user agent) capture the
+                # Data Core on "/" with Core-centred / covered / overlap checks; a routing pass checks device detection.
                 # Look at the images before reporting a phase as done.
 ```
 
@@ -53,7 +55,9 @@ Before upgrading a major version, check `npm view <pkg> peerDependencies`.
 
 ## Structure
 ```
-src/app/                    page.tsx (journey), classic/, work/[slug]/, @modal (intercepted case study), layout, not-found
+src/proxy.ts                device routing: "/" → /m for phones (rewrite)
+src/app/                    page.tsx (desktop journey), m/ (mobile Data Core), classic/, work/[slug]/, @modal (intercepted case study), layout, not-found
+src/components/core/        the mobile Data Core (CorePage, CoreEngine, timeline.ts, chapters/*); 3D in components/three/core/
 src/components/sections/    one component per chapter (BootSection … ContactSection)
 src/components/classic/     Classic View blocks
 src/components/ui/          Header, ChapterNav, Cursor, ProjectCard, StatusBadge, CaseStudy, MetricCounter, ExperienceList, Terminal, Txt…

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { beatLook, beatZ, CHAPTERS, chapterStart, core, distanceAt, GATES, measureView, MORPH_HALF, ramp, STOPS, TOTAL, type StopId } from "@/components/core/timeline";
+import { beatLook, beatZ, CHAPTERS, chapterStart, core, distanceAt, GATES, measureView, MORPH_HALF, ramp, STOPS, TOTAL, type ChapterKey, type StopId } from "@/components/core/timeline";
 import { gsap, ScrollTrigger } from "@/lib/gsap";
 import { isStageMode } from "@/lib/stageMode";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,8 @@ export function CoreEngine({ screenshots }: { screenshots: Record<string, string
       scrollTrigger: { trigger: track, start: "top top", end: "bottom bottom", scrub: 0.7 },
     });
     const trigger = tween.scrollTrigger as ScrollTrigger;
+    /** Page scroll position (px) for a given t. */
+    const scrollFor = (t: number) => trigger.start + (t / TOTAL) * (trigger.end - trigger.start);
 
     const anchors = new Map(STOPS.map((stop) => [stop.id, stop.anchor]));
     const beats: BeatEl[] = Array.from(document.querySelectorAll<HTMLElement>("[data-beat]")).map((el) => ({
@@ -150,17 +152,28 @@ export function CoreEngine({ screenshots }: { screenshots: Record<string, string
     window.__core = {
       t: () => proxy.t,
       total: TOTAL,
-      scrollFor: (t) => trigger.start + (t / TOTAL) * (trigger.end - trigger.start),
+      scrollFor,
       circle: () => ({ x: core.projected.x, y: core.projected.y, r: core.coreRadiusPx }),
       holds: STOPS.map((stop) => ({ id: stop.id, t: (stop.t0 + stop.t1) / 2 })),
       gates: GATES.map((gate) => gate.t),
       morphHalf: MORPH_HALF,
     };
 
+    // Deep links ("/#agents", e.g. "Back to the journey" on a case study): the chapter sections
+    // don't move in stage mode, so fly to the middle of the chapter's first hold instead.
+    const goToHash = () => {
+      const key = window.location.hash.slice(1) as ChapterKey;
+      if (!CHAPTERS.includes(key)) return;
+      const stop = chapterStart(key);
+      window.scrollTo({ top: scrollFor((stop.t0 + stop.t1) / 2), behavior: "instant" });
+    };
+    window.addEventListener("hashchange", goToHash);
+
     // Fonts change text sizes: re-measure the track and the satellites once they're in.
     void document.fonts.ready.then(() => {
       size = "";
       ScrollTrigger.refresh();
+      goToHash();
     });
 
     const idle = "requestIdleCallback" in window ? window.requestIdleCallback(() => setMounted(true), { timeout: 1200 }) : 0;
@@ -168,6 +181,7 @@ export function CoreEngine({ screenshots }: { screenshots: Record<string, string
 
     return () => {
       gsap.ticker.remove(tick);
+      window.removeEventListener("hashchange", goToHash);
       tween.scrollTrigger?.kill();
       tween.kill();
       delete window.__core;

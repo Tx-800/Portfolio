@@ -17,7 +17,7 @@ const BEATS: { id: StopId; slug: string; side: -1 | 1 }[] = [
 export function AgentsChapter() {
   const agents = getChapter("agents");
   return (
-    <section aria-labelledby="core-agents" className={sceneClass}>
+    <section id="agents" aria-labelledby="core-agents" className={sceneClass}>
       <h2 id="core-agents" className="sr-only">
         {agents.heading}
       </h2>

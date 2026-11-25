@@ -104,7 +104,16 @@ Legend: `[ ]` todo · `[x]` done · `[~]` partial
 - [x] Chapters 4–9: crystal cube (refresh layer sweeps up) · scanning ring (a table turns cold blue, alert envelope shoots out) · agent network (two clusters, tap to focus) · bar collapsing ~2 days → 3–5 min · spinning skill globe (skill groups as satellites) · envelope closing with the core as seal, circular "Let's build something" text, contact pills
 - [x] Morph now uploads only the current pair of shapes (9 shapes, CPU swap per chapter); per-chapter accent for gates and streaks
 - [x] `npm run shots -- --flow`: 40 moments × 390×844 / 360×800, all checks pass; desktop unchanged
-- [ ] Owner: review chapters 4–9 on a real phone → then replace the mobile layout on `/` (and retire the pinned-stage code)
+- [x] Content update (2026-11-24): résumé removed, new headline, QAgent replaces Onboarding, Impact as before → after statements, Experience without dates
+- [ ] Owner: review chapters 4–9 on a real phone
+
+## Device routing: "/" serves the right experience (2026-11-25)
+- [x] `src/proxy.ts` (Next 16's name for middleware): phones / tablets by user agent → internal REWRITE of "/" to `/m` (the Data Core); URL stays "/"; a `yg-device` cookie overrides the user agent. Both pages stay static (○)
+- [x] `DeviceSwitch` on both pages: matchMedia `(max-width: 1023.98px), (pointer: coarse)`; on a wrong guess (iPad as Mac, "Desktop site", foldables, rotation / resize) it writes the cookie and reloads "/" (max 2 switches a minute)
+- [x] One 3D world only: the desktop canvas and the boot terminal don't start on a phone-class screen; the Data Core canvas only in stage mode. Each route dynamically imports its own 3D chunk
+- [x] `/flow` → `/m` (canonical "/", indexable: Google's smartphone crawler gets it for "/"). Chapter ids + `/#chapter` deep links fly the Data Core to that chapter
+- [x] `npm run shots`: new routing pass (desktop, phone, iPad-as-Mac, Desktop-site, phone UA on a big screen, resized window, deep link, case-study overlay); phones capture the Data Core on "/"; the old pinned-stage phone pass is removed
+- [ ] Retire the pinned-stage mobile code on the desktop journey (`stage:` variant, scene cards, MetricBeats, carousel, stacked cards): phones never get that page now
 
 ## Phase 7: SEO, audits, deploy
 - [ ] Per-page metadata, OG images (site + per case study), sitemap, robots, JSON-LD Person
@@ -194,6 +203,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` partial
 | 2026-11-24 | Impact = before → after statements, no numbers. Mobile: "MANY PEOPLE" struck outline → "ONE EMAIL"; Core shape 6 is now "many → one" (ring of people collapses into one envelope) | No invented numbers after the onboarding metric was removed |
 | 2026-11-24 | Experience: no dates, no timeline (ExperienceList); each item has a `short` line for the mobile beat; Data Core gets a third Builder beat (portfolio projects) | Owner's request: explain the work instead |
 | 2026-11-24 | Cards show `highlights` (3–4 feature lines) for websites and agents | Masstech / Elitenex read as one-liners before |
+| 2026-11-25 | "/" picks the experience on the server: proxy rewrite (not redirect) to static `/m` for phones / tablets, cookie override; the browser corrects wrong guesses by setting the cookie and reloading "/" | Right page on the first response, URL stays "/", both pages stay prerendered; the proxy runs before Vercel's CDN cache, so the cache holds 2 variants (by device), not one per user agent |
+| 2026-11-25 | Boot terminal never closes on its own (repeat-visit auto hand-off removed; repeat visits show the lines instantly and wait). Closes only on Start / Skip, empty Enter, Esc or a navigating command. New help list, hint line, block cursor | Owner: no auto mode |
+| 2026-11-25 | Device query is `(max-width: 1023.98px), (pointer: coarse)` without the motion preference; reduced motion on a phone gets the Data Core's stacked layout | Device and motion are separate decisions |
 | 2026-11-23 | React pinned with `~19.3.1` in package.json | Stops `npm update` from pulling 19.4, which R3F 9 doesn't support |
 
 ## Backlog

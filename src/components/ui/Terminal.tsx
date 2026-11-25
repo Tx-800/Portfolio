@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownIcon, ArrowRightIcon } from "lucide-react";
-import { useEffect, useRef, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { boot } from "@/data/content";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,8 @@ export function Terminal({ lines, history, ready, focusInput, onCommand, onStart
   const inputRef = useRef<HTMLInputElement>(null);
   const startRef = useRef<HTMLButtonElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  /** Mirrors the input so the block cursor can sit right after the typed text. */
+  const [value, setValue] = useState("");
 
   useEffect(() => {
     if (!ready) return;
@@ -44,6 +46,7 @@ export function Terminal({ lines, history, ready, focusInput, onCommand, onStart
     if (!input) return;
     onCommand(input.value);
     input.value = "";
+    setValue("");
   }
 
   return (
@@ -67,10 +70,11 @@ export function Terminal({ lines, history, ready, focusInput, onCommand, onStart
         ))}
         {ready && (
           <>
-            <p className="text-heading">{boot.messages.ready}</p>
+            <p className="text-muted">{boot.messages.hint}</p>
             {history.map((line, i) => (
-              <p key={i} className={line.startsWith(">") ? "text-heading" : "text-gold"}>
-                {line}
+              // whitespace-pre keeps the help column aligned; an empty line keeps its height.
+              <p key={i} className={cn("whitespace-pre-wrap", line.startsWith(">") ? "text-heading" : "text-gold")}>
+                {line || "\u00a0"}
               </p>
             ))}
             <form onSubmit={submit} className="flex items-center gap-2 text-heading">
@@ -78,15 +82,24 @@ export function Terminal({ lines, history, ready, focusInput, onCommand, onStart
               <label htmlFor="boot-input" className="sr-only">
                 {boot.messages.inputLabel}
               </label>
-              <input
-                ref={inputRef}
-                id="boot-input"
-                autoComplete="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                enterKeyHint="go"
-                className="min-w-0 flex-1 bg-transparent caret-accent outline-none"
-              />
+              {/* The real input is invisible on top; what shows is a mirror of its text and a
+                  blinking block cursor (dimmed while the prompt isn't focused). */}
+              <span className="group relative min-w-0 flex-1">
+                <span aria-hidden="true" className="whitespace-pre">
+                  {value}
+                  <Caret className="opacity-40 group-focus-within:opacity-100" />
+                </span>
+                <input
+                  ref={inputRef}
+                  id="boot-input"
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  enterKeyHint="go"
+                  onChange={(e) => setValue(e.target.value)}
+                  className="absolute inset-0 w-full bg-transparent text-transparent caret-transparent outline-none"
+                />
+              </span>
             </form>
           </>
         )}
@@ -121,6 +134,6 @@ export function Terminal({ lines, history, ready, focusInput, onCommand, onStart
   );
 }
 
-function Caret() {
-  return <span aria-hidden="true" className="ml-0.5 inline-block h-[1.1em] w-2 translate-y-[0.2em] animate-caret bg-accent" />;
+function Caret({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cn("ml-0.5 inline-block h-[1.1em] w-2 translate-y-[0.2em] animate-caret bg-accent", className)} />;
 }
